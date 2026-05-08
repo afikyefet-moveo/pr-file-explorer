@@ -1,0 +1,99 @@
+# GitHub PR File Explorer Enhancer
+
+Utility ideas and prototype code for improving GitHub pull request "Files changed" review flow.
+
+## Mission
+
+Add native-feeling quality-of-life controls to GitHub PR file review pages:
+
+1. Locate the currently viewed diff file in GitHub's file explorer.
+2. Jump quickly back to the top of the PR files page.
+3. Later, copy/open editor commands for Cursor or VS Code.
+4. Later, explore sticky working-file tabs and comment-flow helpers.
+
+## Current Prototype
+
+The first userscript lives here:
+
+```text
+src/github-pr-file-explorer.user.js
+```
+
+Implemented:
+
+- Adds a locate icon to each PR file diff header.
+- Places it after GitHub's "Copy file name to clipboard" button when possible.
+- Extracts the repository-relative file path from GitHub's `data-file-path` attribute.
+- Finds the matching file in `#pr-file-tree`.
+- Scrolls the file explorer as close to centered as scroll bounds allow.
+- Briefly highlights the matching file.
+- Adds a terminal icon that copies a Cursor or VS Code `-g` command for the file.
+- Adds a small back-to-top button after scrolling down.
+- Watches for GitHub's dynamic DOM updates and enhances newly-rendered file headers.
+
+## Install As Unpacked Extension
+
+1. Open `chrome://extensions`.
+2. Enable Developer mode.
+3. Click "Load unpacked".
+4. Select this repository folder.
+5. Open or refresh a GitHub PR files page.
+
+The extension entry point is:
+
+```text
+manifest.json
+```
+
+## Planning Docs
+
+- [Requirements](docs/requirements.md)
+- [DOM map](docs/dom-map.md)
+- [Implementation plan](docs/implementation-plan.md)
+
+## Saved GitHub DOM Examples
+
+These files are local examples captured from a real PR page and are used to derive selectors and requirements:
+
+- `pr-body.html`
+- `pr-file-explorer.html`
+- `pr-code-view-panel.html`
+- `pr-file-section-header.html`
+- `pr-page-header-sticky.html`
+
+Example source page:
+
+```text
+https://github.com/MoveoTech/avi-cranes-app/pull/1779/changes
+```
+
+## Manual Test
+
+1. Install the unpacked extension, install the userscript in Tampermonkey, or paste it into a DevTools Snippet.
+2. Open a GitHub PR files page.
+3. Make sure the file explorer/sidebar is visible.
+4. Click the locate icon in a file header.
+5. Confirm the matching file tree item scrolls into view and flashes.
+6. Click the terminal icon and configure your local repo root when prompted.
+7. Confirm a command like `cursor -g "/path/to/repo/file.ts:123"` is copied.
+8. Scroll down and confirm the back-to-top button appears.
+9. Click it to jump to the top of the PR files area.
+10. Shift-click it to jump to the absolute page top.
+
+## Editor Command Settings
+
+The terminal icon stores lightweight settings in browser `localStorage`:
+
+```text
+prFileExplorer.editor
+prFileExplorer.repoRoot
+```
+
+Default editor is `cursor`. Option-click the terminal icon to reconfigure and use `code` instead.
+
+## Next Build Steps
+
+1. Test the userscript against a live PR.
+2. Add better handling for collapsed or filtered file trees.
+3. Add direct protocol opening for Cursor and VS Code behind a setting.
+4. Add sticky working-file tabs.
