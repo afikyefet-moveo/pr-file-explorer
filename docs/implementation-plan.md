@@ -57,7 +57,9 @@ Once selectors and behavior feel stable:
 - Add a small options page for editor and repo root settings.
 - Keep permissions minimal: GitHub URL matches plus storage.
 
-Status: `manifest.json` is implemented and currently reuses the userscript file as the content script. A dedicated options page is deferred until settings outgrow `localStorage`.
+Status: implemented. The extension is now a TypeScript + Vite + `@crxjs/vite-plugin` MV3 build. Content script entry is `src/content/main.ts`, styles are injected via `src/styles/content.css`, and a small vanilla options page lives under `src/options/`. Storage moved from `localStorage` to `chrome.storage.local`. The legacy userscript at `src/github-pr-file-explorer.user.js` is kept for Tampermonkey users but is no longer the extension entry point.
+
+The editor command feature is gated by a runtime setting (`prFileExplorer.editorEnabled`) and is **off by default**.
 
 ## Phase 5: Working File Tabs
 

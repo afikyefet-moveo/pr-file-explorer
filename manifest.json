@@ -1,18 +1,19 @@
 {
   "manifest_version": 3,
   "name": "GitHub PR File Explorer Enhancer",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Adds file navigation and review quality-of-life controls to GitHub PR files pages.",
+  "permissions": ["storage"],
   "content_scripts": [
     {
       "matches": [
         "https://github.com/*/*/pull/*/files*",
         "https://github.com/*/*/pull/*/changes*"
       ],
-      "js": [
-        "src/github-pr-file-explorer.user.js"
-      ],
+      "js": ["src/content/main.ts"],
+      "css": ["src/styles/content.css"],
       "run_at": "document_idle"
     }
-  ]
+  ],
+  "options_page": "src/options/index.html"
 }

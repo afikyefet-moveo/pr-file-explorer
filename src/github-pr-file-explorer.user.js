@@ -15,8 +15,10 @@
   var BUTTON_CLASS = "pr-file-explorer-locate-button";
   var EDITOR_BUTTON_CLASS = "pr-file-explorer-editor-button";
   var TOP_BUTTON_CLASS = "pr-file-explorer-top-button";
+  var TOOLTIP_CLASS = "pr-file-explorer-tooltip";
   var HIGHLIGHT_CLASS = "pr-file-explorer-highlight";
   var STYLE_ID = "pr-file-explorer-enhancer-style";
+  var TOOLTIP_ID = "pr-file-explorer-tooltip";
   var OBSERVER_DEBOUNCE_MS = 150;
   var TOP_BUTTON_VISIBLE_OFFSET = 360;
   var STORAGE_EDITOR = "prFileExplorer.editor";
@@ -75,6 +77,24 @@
       "}",
       "." + TOP_BUTTON_CLASS + "[data-visible='true'] {",
       "  display: inline-flex;",
+      "}",
+      "." + TOOLTIP_CLASS + " {",
+      "  background: var(--bgColor-emphasis, var(--color-neutral-emphasis-plus));",
+      "  border-radius: 6px;",
+      "  color: var(--fgColor-onEmphasis, var(--color-fg-on-emphasis));",
+      "  display: none;",
+      "  font-size: 12px;",
+      "  line-height: 1.4;",
+      "  max-width: 260px;",
+      "  padding: 6px 8px;",
+      "  pointer-events: none;",
+      "  position: fixed;",
+      "  text-align: center;",
+      "  white-space: normal;",
+      "  z-index: 9999;",
+      "}",
+      "." + TOOLTIP_CLASS + "[data-visible='true'] {",
+      "  display: block;",
       "}",
       "." + HIGHLIGHT_CLASS + " > .PRIVATE_TreeView-item-container,",
       "." + HIGHLIGHT_CLASS + " .PRIVATE_TreeView-item-container,",
@@ -155,6 +175,7 @@
     button.title = "Locate file in file explorer";
     button.dataset.filePath = filePath;
     button.innerHTML = getLocateIconSvg();
+    installTooltip(button, "Locate this file in the file explorer");
     button.addEventListener("click", function onClick(event) {
       event.preventDefault();
       event.stopPropagation();
@@ -178,6 +199,7 @@
     button.title = "Copy editor command. Option-click to configure.";
     button.dataset.filePath = filePath;
     button.innerHTML = getEditorIconSvg();
+    installTooltip(button, "Copy editor command. Option-click to configure.");
     button.addEventListener("click", function onClick(event) {
       event.preventDefault();
       event.stopPropagation();
@@ -306,6 +328,7 @@
     button.setAttribute("aria-label", "Back to top of files");
     button.title = "Back to top of files. Shift-click for page top.";
     button.innerHTML = getGoToTopIconSvg();
+    installTooltip(button, "Back to top of files. Shift-click for page top.");
     button.addEventListener("click", function onClick(event) {
       scrollBackToTop(event.shiftKey);
     });
@@ -372,6 +395,68 @@
       '<path d="M3.47 7.78a.75.75 0 0 0 1.06 0L7.25 5.06v8.19a.75.75 0 0 0 1.5 0V5.06l2.72 2.72a.749.749 0 1 0 1.06-1.06L8.53 2.72a.749.749 0 0 0-1.06 0L3.47 6.72a.75.75 0 0 0 0 1.06Z"></path>',
       "</svg>",
     ].join("");
+  }
+
+  function installTooltip(element, text) {
+    element.dataset.prFileExplorerTooltip = text;
+    element.setAttribute("aria-describedby", TOOLTIP_ID);
+    element.addEventListener("mouseenter", showTooltipForElement);
+    element.addEventListener("focus", showTooltipForElement);
+    element.addEventListener("mouseleave", hideTooltip);
+    element.addEventListener("blur", hideTooltip);
+    element.addEventListener("mousedown", hideTooltip);
+  }
+
+  function showTooltipForElement(event) {
+    var element = event.currentTarget;
+    var text = element.dataset.prFileExplorerTooltip;
+    if (!text) {
+      return;
+    }
+
+    var tooltip = getTooltipElement();
+    tooltip.textContent = text;
+    tooltip.dataset.visible = "true";
+    positionTooltip(tooltip, element);
+  }
+
+  function hideTooltip() {
+    var tooltip = document.getElementById(TOOLTIP_ID);
+    if (tooltip) {
+      tooltip.dataset.visible = "false";
+    }
+  }
+
+  function getTooltipElement() {
+    var tooltip = document.getElementById(TOOLTIP_ID);
+    if (tooltip) {
+      return tooltip;
+    }
+
+    tooltip = document.createElement("div");
+    tooltip.id = TOOLTIP_ID;
+    tooltip.className = TOOLTIP_CLASS;
+    tooltip.setAttribute("role", "tooltip");
+    document.body.appendChild(tooltip);
+    return tooltip;
+  }
+
+  function positionTooltip(tooltip, target) {
+    var targetRect = target.getBoundingClientRect();
+    var tooltipRect = tooltip.getBoundingClientRect();
+    var viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+    var gap = 8;
+    var top = targetRect.top - tooltipRect.height - gap;
+
+    if (top < gap) {
+      top = targetRect.bottom + gap;
+    }
+
+    var left = targetRect.left + targetRect.width / 2 - tooltipRect.width / 2;
+    left = Math.max(gap, Math.min(left, viewportWidth - tooltipRect.width - gap));
+
+    tooltip.style.left = left + "px";
+    tooltip.style.top = top + "px";
   }
 
   function copyEditorCommand(button, header) {

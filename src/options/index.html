@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PR File Explorer Enhancer — Options</title>
+    <link rel="stylesheet" href="./options.css" />
+  </head>
+  <body>
+    <main class="page">
+      <header class="page__header">
+        <h1>PR File Explorer Enhancer</h1>
+        <p class="muted">
+          Quality-of-life controls for GitHub pull request files pages.
+        </p>
+      </header>
+
+      <section class="card">
+        <h2>Editor command (optional)</h2>
+        <p class="muted">
+          When enabled, a terminal icon appears next to each file header. Click
+          it to copy a <code>cursor -g</code> or <code>code -g</code> command for
+          the file at the visible line.
+        </p>
+
+        <form id="editor-form" class="form">
+          <label class="row">
+            <input id="enabled" type="checkbox" />
+            <span>Enable editor command icon</span>
+          </label>
+
+          <label class="row">
+            <span class="row__label">Editor</span>
+            <select id="editor" name="editor">
+              <option value="cursor">cursor</option>
+              <option value="code">code</option>
+            </select>
+          </label>
+
+          <label class="row row--stack">
+            <span class="row__label">Local repository root</span>
+            <input
+              id="repoRoot"
+              name="repoRoot"
+              type="text"
+              placeholder="~/Projects/your-repo"
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <small class="muted">
+              The absolute path of the local clone. The PR file path is appended
+              after this prefix.
+            </small>
+          </label>
+
+          <div class="actions">
+            <button id="save" type="submit" class="btn btn--primary">
+              Save
+            </button>
+            <span id="status" class="status" aria-live="polite"></span>
+          </div>
+        </form>
+      </section>
+    </main>
+
+    <script type="module" src="./options.ts"></script>
+  </body>
+</html>

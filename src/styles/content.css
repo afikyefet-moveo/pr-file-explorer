@@ -1,0 +1,87 @@
+.pr-file-explorer-locate-button {
+  align-items: center;
+  border-radius: 6px;
+  display: inline-flex;
+  justify-content: center;
+  margin-left: 4px;
+  min-width: 28px;
+}
+
+.pr-file-explorer-editor-button {
+  align-items: center;
+  border-radius: 6px;
+  display: inline-flex;
+  justify-content: center;
+  margin-left: 2px;
+  min-width: 28px;
+}
+
+.pr-file-explorer-locate-button[data-state="not-found"],
+.pr-file-explorer-editor-button[data-state="error"] {
+  color: var(--fgColor-danger, var(--color-danger-fg));
+}
+
+.pr-file-explorer-editor-button[data-state="copied"] {
+  color: var(--fgColor-success, var(--color-success-fg));
+}
+
+.pr-file-explorer-top-button {
+  align-items: center;
+  bottom: max(24px, env(safe-area-inset-bottom));
+  box-shadow: var(--shadow-floating-small, 0 8px 24px rgba(140, 149, 159, 0.2));
+  display: none;
+  height: 32px;
+  justify-content: center;
+  position: fixed;
+  right: max(24px, env(safe-area-inset-right));
+  transition: opacity 120ms ease-out, transform 120ms ease-out;
+  width: 32px;
+  z-index: 80;
+}
+
+.pr-file-explorer-top-button[data-visible="true"] {
+  display: inline-flex;
+}
+
+.pr-file-explorer-tooltip {
+  background: var(--bgColor-emphasis, var(--color-neutral-emphasis-plus));
+  border-radius: 6px;
+  color: var(--fgColor-onEmphasis, var(--color-fg-on-emphasis));
+  display: none;
+  font-size: 12px;
+  line-height: 1.4;
+  max-width: 260px;
+  padding: 6px 8px;
+  pointer-events: none;
+  position: fixed;
+  text-align: center;
+  white-space: normal;
+  z-index: 9999;
+}
+
+.pr-file-explorer-tooltip[data-visible="true"] {
+  display: block;
+}
+
+.pr-file-explorer-highlight > .PRIVATE_TreeView-item-container,
+.pr-file-explorer-highlight .PRIVATE_TreeView-item-container,
+.pr-file-explorer-highlight {
+  animation: pr-file-explorer-pulse 1200ms ease-out;
+}
+
+@keyframes pr-file-explorer-pulse {
+  0% {
+    background: var(--bgColor-accent-muted, var(--color-accent-subtle));
+    box-shadow: inset 0 0 0 1px
+      var(--borderColor-accent-emphasis, var(--color-accent-emphasis));
+  }
+  45% {
+    background: var(--bgColor-accent-muted, var(--color-accent-subtle));
+    box-shadow: inset 0 0 0 1px
+      var(--borderColor-accent-emphasis, var(--color-accent-emphasis));
+  }
+  100% {
+    background: transparent;
+    box-shadow: inset 0 0 0 1px transparent;
+  }
+}
