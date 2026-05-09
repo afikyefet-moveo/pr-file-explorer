@@ -1,0 +1,134 @@
+import { normalizePath, type FilePath } from "../../shared/dom";
+import { getStickyHeaderOffset } from "../../shared/stickyHeader";
+import type { CommentTarget } from "./types";
+
+export function getDiffRegions(): HTMLElement[] {
+  return Array.from(
+    document.querySelectorAll<HTMLElement>("[role='region'][id^='diff-']")
+  ).filter((region) => Boolean(getFilePathFromRegion(region)));
+}
+
+export function getCurrentDiffRegion(): HTMLElement | null {
+  const viewportTop = getStickyHeaderOffset();
+  const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+  const viewportMiddle = viewportTop + (viewportHeight - viewportTop) / 2;
+  const regions = getDiffRegions();
+
+  return (
+    regions.find((region) => {
+      const rect = region.getBoundingClientRect();
+      return rect.top <= viewportMiddle && rect.bottom >= viewportMiddle;
+    }) ??
+    regions.find((region) => {
+      const rect = region.getBoundingClientRect();
+      return rect.bottom > viewportTop && rect.top < viewportHeight;
+    }) ??
+    null
+  );
+}
+
+export function getFilePathFromRegion(region: HTMLElement): FilePath | null {
+  const explicitPathNode = region.querySelector<HTMLElement>("[data-file-path]");
+  const datasetPath = explicitPathNode?.dataset["filePath"];
+  if (datasetPath) {
+    return normalizePath(datasetPath);
+  }
+
+  const code = region.querySelector<HTMLElement>("h3 code");
+  return code ? normalizePath(code.textContent) : null;
+}
+
+export function getCommentTargets(): CommentTarget[] {
+  const allTargets = getAllCommentTargets();
+  const unresolvedTargets = allTargets.filter((target) =>
+    isUnresolvedThread(target.element)
+  );
+  return unresolvedTargets.length ? unresolvedTargets : allTargets;
+}
+
+export function getAllCommentTargets(): CommentTarget[] {
+  const threadNodes = Array.from(
+    document.querySelectorAll<HTMLElement>(
+      "[data-testid='review-thread'], [data-marker-navigation-comment-thread-id]"
+    )
+  );
+
+  const targets = threadNodes
+    .map((node): CommentTarget | null => {
+      const element =
+        node.closest<HTMLElement>("[data-testid='review-thread']") ??
+        node.closest<HTMLElement>("[data-marker-navigation-comment-thread-id]") ??
+        node;
+      const region = element.closest<HTMLElement>("[role='region'][id^='diff-']");
+      return region ? { element, region } : null;
+    })
+    .filter((target): target is CommentTarget => target !== null);
+
+  return targets.filter(
+    (target, index) =>
+      targets.findIndex((candidate) => candidate.element === target.element) ===
+      index
+  );
+}
+
+export function getCommentTargetsForRegion(region: HTMLElement): CommentTarget[] {
+  return getAllCommentTargets().filter((target) => target.region === region);
+}
+
+export function hasUnresolvedThread(region: HTMLElement): boolean {
+  return getCommentTargetsForRegion(region).some((target) =>
+    isUnresolvedThread(target.element)
+  );
+}
+
+export function getUnviewedRegions(): HTMLElement[] {
+  return getDiffRegions().filter((region) =>
+    Boolean(
+      region.querySelector("button[aria-label='Not Viewed']") ??
+        Array.from(region.querySelectorAll<HTMLElement>("button[aria-pressed='false']")).find(
+          (button) => normalizePath(button.textContent).includes("Viewed")
+        )
+    )
+  );
+}
+
+export function getSelectedRightSideLines(region: HTMLElement): string[] {
+  return Array.from(
+    region.querySelectorAll<HTMLElement>(
+      "[data-line-number][data-diff-side='right'][data-selected='true']"
+    )
+  )
+    .map((cell) => normalizePath(cell.getAttribute("data-line-number")))
+    .filter(Boolean)
+    .filter((line, index, list) => list.indexOf(line) === index)
+    .sort((a, b) => Number(a) - Number(b));
+}
+
+export function getFirstVisibleRightSideLine(region: HTMLElement): string {
+  const cells = Array.from(
+    region.querySelectorAll<HTMLElement>("[data-line-number][data-diff-side='right']")
+  );
+  const viewportTop = getStickyHeaderOffset();
+  const viewportBottom = window.innerHeight || document.documentElement.clientHeight;
+  const visible = cells.find((cell) => {
+    const rect = cell.getBoundingClientRect();
+    return rect.bottom > viewportTop && rect.top < viewportBottom;
+  });
+
+  return visible ? normalizePath(visible.getAttribute("data-line-number")) : "";
+}
+
+function isUnresolvedThread(thread: HTMLElement): boolean {
+  return Array.from(thread.querySelectorAll<HTMLElement>("button, [role='button']")).some(
+    (button) => {
+      const label = normalizePath(
+        button.getAttribute("aria-label") ??
+          button.textContent ??
+          button.getAttribute("title") ??
+          ""
+      ).toLowerCase();
+      return label.includes("resolve") && !label.includes("unresolve");
+    }
+  );
+}
+
