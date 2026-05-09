@@ -1,6 +1,9 @@
 import { createEditorButton } from "../features/editor/editorButton";
 import { createLocateButton } from "../features/locate/locateButton";
-import { BUTTON_CLASS } from "../shared/constants";
+import {
+  BUTTON_CLASS,
+  EDITOR_BUTTON_CLASS,
+} from "../shared/constants";
 import {
   findCopyFileNameButton,
   normalizePath,
@@ -8,43 +11,58 @@ import {
 } from "../shared/dom";
 
 export interface EnhanceOptions {
-  /** When true, an editor command icon is added next to the locate icon. */
+  withLocateButton: boolean;
   withEditorButton: boolean;
 }
 
 export function enhanceFileHeaders(options: EnhanceOptions): void {
-  for (const header of getCandidateHeaderNodes()) {
-    if (header.querySelector(`.${BUTTON_CLASS}`)) {
-      continue;
-    }
+  if (!options.withLocateButton) {
+    removeInjectedButtons();
+    return;
+  }
 
+  if (!options.withEditorButton) {
+    removeButtons(EDITOR_BUTTON_CLASS);
+  }
+
+  for (const header of getCandidateHeaderNodes()) {
     const filePath = getFilePathFromHeader(header);
     if (!filePath) {
       continue;
     }
 
-    const locateButton = createLocateButton(filePath);
-    const editorButton = options.withEditorButton
-      ? createEditorButton(filePath, header)
-      : null;
+    const hasLocate = Boolean(header.querySelector(`.${BUTTON_CLASS}`));
+    const hasEditor = Boolean(header.querySelector(`.${EDITOR_BUTTON_CLASS}`));
 
-    const copyButton = findCopyFileNameButton(header);
-    if (copyButton?.parentNode) {
-      copyButton.insertAdjacentElement("afterend", locateButton);
-      if (editorButton) {
-        locateButton.insertAdjacentElement("afterend", editorButton);
+    let locateButton = header.querySelector<HTMLElement>(`.${BUTTON_CLASS}`);
+    if (!hasLocate) {
+      const created = createLocateButton(filePath);
+      const copyButton = findCopyFileNameButton(header);
+      if (copyButton?.parentNode) {
+        copyButton.insertAdjacentElement("afterend", created);
+      } else {
+        const pathHeading = header.querySelector<HTMLElement>("h3");
+        pathHeading?.insertAdjacentElement("afterend", created);
       }
-      continue;
+      locateButton = created;
     }
 
-    const pathHeading = header.querySelector<HTMLElement>("h3");
-    if (pathHeading?.parentNode) {
-      pathHeading.insertAdjacentElement("afterend", locateButton);
-      if (editorButton) {
-        locateButton.insertAdjacentElement("afterend", editorButton);
-      }
+    if (options.withEditorButton && !hasEditor && locateButton) {
+      const editorButton = createEditorButton(filePath, header);
+      locateButton.insertAdjacentElement("afterend", editorButton);
     }
   }
+}
+
+function removeInjectedButtons(): void {
+  removeButtons(BUTTON_CLASS);
+  removeButtons(EDITOR_BUTTON_CLASS);
+}
+
+function removeButtons(className: string): void {
+  document
+    .querySelectorAll<HTMLElement>(`.${className}`)
+    .forEach((node) => node.remove());
 }
 
 function getCandidateHeaderNodes(): HTMLElement[] {

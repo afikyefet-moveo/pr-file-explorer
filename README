@@ -17,7 +17,8 @@ Add native-feeling quality-of-life controls to GitHub PR file review pages:
 - Vite 5 + `@crxjs/vite-plugin`
 - Manifest V3 Chrome extension
 - Vanilla DOM content script (no framework) for the GitHub page
-- Tiny vanilla options page for editor settings
+- React + Tailwind + shadcn-ui for the toolbar popup
+- Tiny vanilla options page for editor command settings
 
 ## Layout
 
@@ -34,8 +35,13 @@ src/
   features/
     locate/                  # P0: locate file in explorer
     editor/                  # P2: editor command, gated by setting (default off)
-  shared/                    # tooltip, icons, dom helpers, button factory, sticky header offsets
+  shared/
+    settings.ts              # single source of truth for chrome.storage settings
+    tooltip.ts, icons.ts, dom.ts, buttonFactory.ts, stickyHeader.ts, constants.ts
   styles/content.css         # injected on PR pages
+  popup/                     # React + Tailwind + shadcn quick-toggle popup
+  components/ui/             # shadcn ui primitives (switch, label, button, segmented, separator)
+  lib/utils.ts               # cn() helper
   options/                   # settings UI for the editor command
 ```
 
@@ -76,37 +82,45 @@ npm run typecheck
 
 ## Features
 
-Always on:
+Toolbar popup (click the extension icon while on any page):
+
+- Toggle the "locate file in explorer" icon on/off.
+- Toggle the floating back-to-top button on/off.
+- Pick what plain click vs Shift-click does for back-to-top: jump to **Files top** or **Page top**, independently configurable.
+- Swap the two with one click.
+
+On a PR page, all on by default:
 
 - Locate icon in each PR file diff header (placed after GitHub's "Copy file name to clipboard" button when available).
 - Native-looking tooltip for the injected icon buttons.
 - File path extracted from `data-file-path`, with `h3 code` fallback.
 - File tree match in `#pr-file-tree`, scrolled as close to centered as scroll bounds allow, with a brief highlight pulse.
 - Mutation observer keeps newly-rendered diff headers enhanced as GitHub paginates.
-- Floating back-to-top button after scrolling down. Shift-click for absolute page top.
+- Floating back-to-top button after scrolling down.
+- Terminal icon that copies a `cursor -g` or `code -g` command for the file at the visible right-side line. The first click prompts for the local repo root.
 
-Optional, off by default:
+## Settings
 
-- Terminal icon that copies a `cursor -g` or `code -g` command for the file at the visible right-side line. Toggle it on from the options page.
+All settings live in `chrome.storage.local` under the `prFileExplorer.*` namespace. Two surfaces edit them:
 
-## Editor Command Settings
+- **Toolbar popup** — locate toggle, back-to-top toggle, click bindings.
+- **Options page** — `chrome://extensions` → Details → Extension options. Editor command enable/disable, editor choice, local repo root.
 
-The editor button is **disabled by default**. Open the options page to turn it on:
-
-1. `chrome://extensions` → find "GitHub PR File Explorer Enhancer" → Details → Extension options.
-2. Check "Enable editor command icon".
-3. Pick `cursor` or `code` and set your local repository root, e.g. `~/Projects/your-repo`.
-4. Save.
-
-Settings live in `chrome.storage.local` under:
+Stored keys:
 
 ```text
+prFileExplorer.locateEnabled
+prFileExplorer.backToTopEnabled
+prFileExplorer.backToTopClickAction         # "filesTop" | "pageTop"
+prFileExplorer.backToTopShiftClickAction    # "filesTop" | "pageTop"
 prFileExplorer.editorEnabled
-prFileExplorer.editor
+prFileExplorer.editor                       # "cursor" | "code"
 prFileExplorer.repoRoot
 ```
 
-In the PR page, Option-click the terminal icon for an inline reconfigure prompt.
+The editor button is **enabled by default**, but it has no preconfigured `repoRoot`. The first time you click the terminal icon on a file header, you'll be prompted for the editor (`cursor` or `code`) and the local repository root, e.g. `~/Projects/your-repo`. After that the click silently copies the command.
+
+You can also configure (or fully disable) it from the options page (`chrome://extensions` → Details → Extension options). Option-click the terminal icon on any PR page for an inline reconfigure prompt.
 
 ## Manual Test
 
@@ -118,7 +132,9 @@ In the PR page, Option-click the terminal icon for an inline reconfigure prompt.
 6. Scroll down. Confirm the back-to-top button appears.
 7. Click it to jump to the top of the PR files area.
 8. Shift-click for absolute page top.
-9. (Optional) Enable the editor command icon in options, then click it on a file header and confirm a command like `cursor -g "/path/to/repo/file.ts:123"` is copied.
+9. Open the toolbar popup, swap the click and shift-click bindings, then test that the behavior flips.
+10. Toggle the locate feature off in the popup and confirm the icons disappear from file headers.
+11. (Optional) Enable the editor command icon in options, then click it on a file header and confirm a command like `cursor -g "/path/to/repo/file.ts:123"` is copied.
 
 ## Legacy Userscript
 

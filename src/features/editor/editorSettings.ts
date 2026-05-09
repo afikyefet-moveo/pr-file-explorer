@@ -1,4 +1,22 @@
-export type EditorChoice = "cursor" | "code";
+/**
+ * Backwards-compatible facade over `shared/settings.ts`. The single source of
+ * truth for all settings now lives in `shared/settings.ts`, but the editor
+ * feature historically owned its own settings module. Existing imports keep
+ * working through these re-exports.
+ */
+import {
+  getSettings,
+  setSettings,
+  onSettingsChanged,
+  guessLocalRepoRoot,
+  normalizeEditor,
+  normalizeRepoRoot,
+  type Settings,
+  type EditorChoice,
+} from "../../shared/settings";
+
+export { guessLocalRepoRoot, normalizeEditor, normalizeRepoRoot };
+export type { EditorChoice };
 
 export interface EditorSettings {
   enabled: boolean;
@@ -6,79 +24,31 @@ export interface EditorSettings {
   repoRoot: string;
 }
 
-const STORAGE_KEYS = {
-  enabled: "prFileExplorer.editorEnabled",
-  editor: "prFileExplorer.editor",
-  repoRoot: "prFileExplorer.repoRoot",
-} as const;
-
-const DEFAULT_SETTINGS: EditorSettings = {
-  enabled: false,
-  editor: "cursor",
-  repoRoot: "",
-};
+function project(settings: Settings): EditorSettings {
+  return {
+    enabled: settings.editorEnabled,
+    editor: settings.editor,
+    repoRoot: settings.repoRoot,
+  };
+}
 
 export async function getEditorSettings(): Promise<EditorSettings> {
-  const stored = await chrome.storage.local.get([
-    STORAGE_KEYS.enabled,
-    STORAGE_KEYS.editor,
-    STORAGE_KEYS.repoRoot,
-  ]);
-
-  return {
-    enabled: Boolean(stored[STORAGE_KEYS.enabled] ?? DEFAULT_SETTINGS.enabled),
-    editor: normalizeEditor(stored[STORAGE_KEYS.editor]),
-    repoRoot: normalizeRepoRoot(stored[STORAGE_KEYS.repoRoot]),
-  };
+  return project(await getSettings());
 }
 
 export async function setEditorSettings(
   patch: Partial<EditorSettings>
 ): Promise<EditorSettings> {
-  const next = { ...(await getEditorSettings()), ...patch };
-  await chrome.storage.local.set({
-    [STORAGE_KEYS.enabled]: next.enabled,
-    [STORAGE_KEYS.editor]: next.editor,
-    [STORAGE_KEYS.repoRoot]: next.repoRoot,
+  const next = await setSettings({
+    ...(patch.enabled !== undefined ? { editorEnabled: patch.enabled } : {}),
+    ...(patch.editor !== undefined ? { editor: patch.editor } : {}),
+    ...(patch.repoRoot !== undefined ? { repoRoot: patch.repoRoot } : {}),
   });
-  return next;
+  return project(next);
 }
 
 export function onEditorSettingsChanged(
   listener: (settings: EditorSettings) => void
 ): () => void {
-  const handler = (
-    changes: { [key: string]: chrome.storage.StorageChange },
-    areaName: chrome.storage.AreaName
-  ): void => {
-    if (areaName !== "local") {
-      return;
-    }
-    const watched = [
-      STORAGE_KEYS.enabled,
-      STORAGE_KEYS.editor,
-      STORAGE_KEYS.repoRoot,
-    ];
-    if (!watched.some((key) => key in changes)) {
-      return;
-    }
-    void getEditorSettings().then(listener);
-  };
-
-  chrome.storage.onChanged.addListener(handler);
-  return () => chrome.storage.onChanged.removeListener(handler);
-}
-
-export function normalizeEditor(value: unknown): EditorChoice {
-  return String(value ?? "").trim().toLowerCase() === "code" ? "code" : "cursor";
-}
-
-export function normalizeRepoRoot(value: unknown): string {
-  return String(value ?? "").trim().replace(/\/+$/, "");
-}
-
-export function guessLocalRepoRoot(): string {
-  const parts = window.location.pathname.split("/").filter(Boolean);
-  const repo = parts[1] ?? "repo";
-  return `~/Projects/${repo}`;
+  return onSettingsChanged((settings) => listener(project(settings)));
 }

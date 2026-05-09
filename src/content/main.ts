@@ -1,31 +1,68 @@
 import {
-  getEditorSettings,
-  onEditorSettingsChanged,
-  type EditorSettings,
-} from "../features/editor/editorSettings";
+  getSettings,
+  onSettingsChanged,
+  type Settings,
+} from "../shared/settings";
 import { enhanceFileHeaders } from "./enhanceFileHeaders";
-import { installGoToTopButton } from "./goToTopButton";
+import {
+  installGoToTopButton,
+  uninstallGoToTopButton,
+  type GoToTopController,
+} from "./goToTopButton";
 import { observeGitHubUpdates } from "./observeGitHubUpdates";
 
-let cachedSettings: EditorSettings | null = null;
+let cachedSettings: Settings | null = null;
+let goToTop: GoToTopController | null = null;
 
 async function init(): Promise<void> {
-  cachedSettings = await getEditorSettings();
+  cachedSettings = await getSettings();
 
-  enhanceAll();
-  installGoToTopButton();
-  observeGitHubUpdates(enhanceAll);
+  applyAll();
+  observeGitHubUpdates(applyEnhancements);
 
-  onEditorSettingsChanged((next) => {
+  onSettingsChanged((next) => {
     cachedSettings = next;
-    enhanceAll();
+    applyAll();
   });
 }
 
-function enhanceAll(): void {
+function applyAll(): void {
+  applyEnhancements();
+  applyGoToTop();
+}
+
+function applyEnhancements(): void {
+  if (!cachedSettings) {
+    return;
+  }
   enhanceFileHeaders({
-    withEditorButton: cachedSettings?.enabled === true,
+    withLocateButton: cachedSettings.locateEnabled,
+    withEditorButton: cachedSettings.editorEnabled,
   });
+}
+
+function applyGoToTop(): void {
+  if (!cachedSettings) {
+    return;
+  }
+  if (!cachedSettings.backToTopEnabled) {
+    goToTop?.uninstall();
+    goToTop = null;
+    uninstallGoToTopButton();
+    return;
+  }
+
+  const bindings = {
+    click: cachedSettings.backToTopClickAction,
+    shiftClick: cachedSettings.backToTopShiftClickAction,
+  };
+
+  if (goToTop) {
+    goToTop.setBindings(bindings);
+    return;
+  }
+
+  goToTop = installGoToTopButton(bindings);
 }
 
 if (document.readyState === "loading") {

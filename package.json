@@ -1,7 +1,7 @@
 {
   "name": "pr-file-explorer",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Adds file navigation and review quality-of-life controls to GitHub PR files pages.",
   "type": "module",
   "scripts": {
@@ -13,7 +13,26 @@
   "devDependencies": {
     "@crxjs/vite-plugin": "^2.0.0-beta.27",
     "@types/chrome": "^0.0.270",
+    "@types/node": "^20.19.40",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^4.7.0",
+    "autoprefixer": "^10.5.0",
+    "postcss": "^8.5.14",
+    "tailwindcss": "^3.4.19",
     "typescript": "^5.6.3",
     "vite": "^5.4.10"
+  },
+  "dependencies": {
+    "@radix-ui/react-label": "^2.1.8",
+    "@radix-ui/react-separator": "^1.1.8",
+    "@radix-ui/react-slot": "^1.2.4",
+    "@radix-ui/react-switch": "^1.2.6",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.14.0",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "tailwind-merge": "^3.5.0"
   }
 }

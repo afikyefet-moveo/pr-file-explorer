@@ -5,35 +5,78 @@ import {
 } from "../shared/constants";
 import { getGoToTopIconSvg } from "../shared/icons";
 import { getFilesTopScrollY } from "../shared/stickyHeader";
-import { installTooltip } from "../shared/tooltip";
+import { installTooltip, updateTooltipText } from "../shared/tooltip";
+import type { ScrollTarget } from "../shared/settings";
 
-const TOOLTIP_TEXT = "Back to top of files. Shift-click for page top.";
+export interface GoToTopBindings {
+  click: ScrollTarget;
+  shiftClick: ScrollTarget;
+}
 
-export function installGoToTopButton(): void {
+export interface GoToTopController {
+  setBindings(next: GoToTopBindings): void;
+  uninstall(): void;
+}
+
+export function installGoToTopButton(
+  bindings: GoToTopBindings
+): GoToTopController | null {
   if (document.querySelector(`.${TOP_BUTTON_CLASS}`)) {
-    return;
+    return null;
   }
+
+  let current = bindings;
+  const tooltip = describeBindings(current);
 
   const button = createIconButton({
     variant: "default",
-    ariaLabel: "Back to top of files",
-    title: TOOLTIP_TEXT,
+    ariaLabel: "Back to top",
+    title: tooltip,
     extraClassName: TOP_BUTTON_CLASS,
     innerHtml: getGoToTopIconSvg(),
   });
 
-  installTooltip(button, TOOLTIP_TEXT);
-  button.addEventListener("click", (event) => {
-    scrollBackToTop(event.shiftKey);
-  });
+  installTooltip(button, tooltip);
+  const handleClick = (event: MouseEvent): void => {
+    const target = event.shiftKey ? current.shiftClick : current.click;
+    scrollTo(target);
+  };
+  button.addEventListener("click", handleClick);
 
   document.body.appendChild(button);
   updateGoToTopVisibility(button);
-  window.addEventListener(
-    "scroll",
-    () => updateGoToTopVisibility(button),
-    { passive: true }
-  );
+
+  const onScroll = (): void => updateGoToTopVisibility(button);
+  window.addEventListener("scroll", onScroll, { passive: true });
+
+  return {
+    setBindings(next) {
+      current = next;
+      const text = describeBindings(next);
+      button.title = text;
+      updateTooltipText(button, text);
+    },
+    uninstall() {
+      button.removeEventListener("click", handleClick);
+      window.removeEventListener("scroll", onScroll);
+      button.remove();
+    },
+  };
+}
+
+export function uninstallGoToTopButton(): void {
+  const existing = document.querySelector<HTMLElement>(`.${TOP_BUTTON_CLASS}`);
+  existing?.remove();
+}
+
+function describeBindings(bindings: GoToTopBindings): string {
+  return `Back to ${labelFor(bindings.click)}. Shift-click for ${labelFor(
+    bindings.shiftClick
+  )}.`;
+}
+
+function labelFor(target: ScrollTarget): string {
+  return target === "pageTop" ? "page top" : "top of files";
 }
 
 function updateGoToTopVisibility(button: HTMLElement): void {
@@ -45,9 +88,9 @@ function shouldShowGoToTopButton(): boolean {
   return window.scrollY > targetTop + TOP_BUTTON_VISIBLE_OFFSET;
 }
 
-function scrollBackToTop(usePageTop: boolean): void {
+function scrollTo(target: ScrollTarget): void {
   window.scrollTo({
-    top: usePageTop ? 0 : getFilesTopScrollY(),
+    top: target === "pageTop" ? 0 : getFilesTopScrollY(),
     behavior: "smooth",
   });
 }
