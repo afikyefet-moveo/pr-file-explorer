@@ -1,4 +1,5 @@
 import { REVIEW_RAIL_CLASS } from "../../shared/constants";
+import { debugLog, safely } from "../../shared/diagnostics";
 import { clearCommentBadges, markFilesWithComments } from "./commentBadges";
 import { copyReviewContextForRegion } from "./reviewContext";
 import {
@@ -33,15 +34,18 @@ export function installReviewFlowRail(): void {
   railScrollListener = () => refreshReviewFlow();
   window.addEventListener("scroll", railScrollListener, { passive: true });
   installed = true;
+  debugLog("review flow rail installed");
 }
 
 export function refreshReviewFlow(): void {
-  const rail = document.querySelector<HTMLElement>(`.${REVIEW_RAIL_CLASS}`);
-  if (rail) {
-    applyRailState(rail, getRailState());
-  }
+  safely("refresh review flow", () => {
+    const rail = document.querySelector<HTMLElement>(`.${REVIEW_RAIL_CLASS}`);
+    if (rail) {
+      applyRailState(rail, getRailState());
+    }
 
-  markFilesWithComments();
+    markFilesWithComments();
+  });
 }
 
 export function uninstallReviewFlowRail(): void {
@@ -55,6 +59,7 @@ export function uninstallReviewFlowRail(): void {
 
   clearCommentBadges();
   installed = false;
+  debugLog("review flow rail uninstalled");
 }
 
 function getRailState(): RailState {

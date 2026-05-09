@@ -9,7 +9,9 @@ export function markFilesWithComments(): void {
   document
     .querySelectorAll<HTMLElement>(`.${COMMENT_BADGE_CLASS}`)
     .forEach((badge) => {
-      if (!commentedPaths.includes(badge.dataset["filePath"] as FilePath)) {
+      const treeItem = badge.closest<HTMLElement>("[role='treeitem']");
+      const filePath = badge.dataset["filePath"] as FilePath | undefined;
+      if (!filePath || !treeItem || !commentedPaths.includes(filePath)) {
         badge.remove();
       }
     });
@@ -45,4 +47,3 @@ function getCommentedFilePaths(): FilePath[] {
     .filter((path): path is FilePath => Boolean(path))
     .filter((path, index, list) => list.indexOf(path) === index);
 }
-

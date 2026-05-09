@@ -3,6 +3,7 @@ import {
   onSettingsChanged,
   type Settings,
 } from "../shared/settings";
+import { debugLog, safely } from "../shared/diagnostics";
 import { enhanceFileHeaders } from "./enhanceFileHeaders";
 import {
   installGoToTopButton,
@@ -21,9 +22,10 @@ let goToTop: GoToTopController | null = null;
 
 async function init(): Promise<void> {
   cachedSettings = await getSettings();
+  debugLog("content script initialized", cachedSettings);
 
   applyAll();
-  observeGitHubUpdates(applyEnhancements);
+  observeGitHubUpdates(() => safely("refresh enhancements", applyEnhancements));
 
   onSettingsChanged((next) => {
     cachedSettings = next;
@@ -32,9 +34,9 @@ async function init(): Promise<void> {
 }
 
 function applyAll(): void {
-  applyEnhancements();
-  applyGoToTop();
-  applyReviewFlow();
+  safely("apply enhancements", applyEnhancements);
+  safely("apply back to top", applyGoToTop);
+  safely("apply review flow", applyReviewFlow);
 }
 
 function applyEnhancements(): void {

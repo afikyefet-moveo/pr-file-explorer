@@ -22,9 +22,28 @@ function getReviewContext(region: HTMLElement): ReviewContext {
   return {
     filePath,
     lineLabel: formatLineLabel(lineNumbers),
-    selectedText: window.getSelection?.()?.toString().trim() ?? "",
+    selectedText: getSelectedTextInsideRegion(region),
     url: buildReviewContextUrl(region, lineNumbers[0]),
   };
+}
+
+function getSelectedTextInsideRegion(region: HTMLElement): string {
+  const selection = window.getSelection?.();
+  if (!selection || selection.isCollapsed || selection.rangeCount === 0) {
+    return "";
+  }
+
+  const anchorNode = selection.anchorNode;
+  const focusNode = selection.focusNode;
+  if (!anchorNode || !focusNode) {
+    return "";
+  }
+
+  if (!region.contains(anchorNode) || !region.contains(focusNode)) {
+    return "";
+  }
+
+  return selection.toString().trim();
 }
 
 function formatLineLabel(lines: string[]): string {
@@ -63,4 +82,3 @@ function buildReviewContextMarkdown(context: ReviewContext): string {
 
   return lines.join("\n");
 }
-

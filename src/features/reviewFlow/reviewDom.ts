@@ -1,11 +1,18 @@
-import { normalizePath, type FilePath } from "../../shared/dom";
+import {
+  getDiffRegions as getSharedDiffRegions,
+  getFilePathFromDiffRegion,
+  getNotViewedButton,
+  getReviewThreadNodes,
+  getRightSideLineCells,
+  getSelectedRightSideLineCells,
+  normalizePath,
+  type FilePath,
+} from "../../shared/dom";
 import { getStickyHeaderOffset } from "../../shared/stickyHeader";
 import type { CommentTarget } from "./types";
 
 export function getDiffRegions(): HTMLElement[] {
-  return Array.from(
-    document.querySelectorAll<HTMLElement>("[role='region'][id^='diff-']")
-  ).filter((region) => Boolean(getFilePathFromRegion(region)));
+  return getSharedDiffRegions();
 }
 
 export function getCurrentDiffRegion(): HTMLElement | null {
@@ -28,14 +35,7 @@ export function getCurrentDiffRegion(): HTMLElement | null {
 }
 
 export function getFilePathFromRegion(region: HTMLElement): FilePath | null {
-  const explicitPathNode = region.querySelector<HTMLElement>("[data-file-path]");
-  const datasetPath = explicitPathNode?.dataset["filePath"];
-  if (datasetPath) {
-    return normalizePath(datasetPath);
-  }
-
-  const code = region.querySelector<HTMLElement>("h3 code");
-  return code ? normalizePath(code.textContent) : null;
+  return getFilePathFromDiffRegion(region);
 }
 
 export function getCommentTargets(): CommentTarget[] {
@@ -47,11 +47,7 @@ export function getCommentTargets(): CommentTarget[] {
 }
 
 export function getAllCommentTargets(): CommentTarget[] {
-  const threadNodes = Array.from(
-    document.querySelectorAll<HTMLElement>(
-      "[data-testid='review-thread'], [data-marker-navigation-comment-thread-id]"
-    )
-  );
+  const threadNodes = getReviewThreadNodes();
 
   const targets = threadNodes
     .map((node): CommentTarget | null => {
@@ -82,22 +78,11 @@ export function hasUnresolvedThread(region: HTMLElement): boolean {
 }
 
 export function getUnviewedRegions(): HTMLElement[] {
-  return getDiffRegions().filter((region) =>
-    Boolean(
-      region.querySelector("button[aria-label='Not Viewed']") ??
-        Array.from(region.querySelectorAll<HTMLElement>("button[aria-pressed='false']")).find(
-          (button) => normalizePath(button.textContent).includes("Viewed")
-        )
-    )
-  );
+  return getDiffRegions().filter((region) => Boolean(getNotViewedButton(region)));
 }
 
 export function getSelectedRightSideLines(region: HTMLElement): string[] {
-  return Array.from(
-    region.querySelectorAll<HTMLElement>(
-      "[data-line-number][data-diff-side='right'][data-selected='true']"
-    )
-  )
+  return getSelectedRightSideLineCells(region)
     .map((cell) => normalizePath(cell.getAttribute("data-line-number")))
     .filter(Boolean)
     .filter((line, index, list) => list.indexOf(line) === index)
@@ -105,9 +90,7 @@ export function getSelectedRightSideLines(region: HTMLElement): string[] {
 }
 
 export function getFirstVisibleRightSideLine(region: HTMLElement): string {
-  const cells = Array.from(
-    region.querySelectorAll<HTMLElement>("[data-line-number][data-diff-side='right']")
-  );
+  const cells = getRightSideLineCells(region);
   const viewportTop = getStickyHeaderOffset();
   const viewportBottom = window.innerHeight || document.documentElement.clientHeight;
   const visible = cells.find((cell) => {
@@ -131,4 +114,3 @@ function isUnresolvedThread(thread: HTMLElement): boolean {
     }
   );
 }
-

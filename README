@@ -34,9 +34,11 @@ src/
     goToTopButton.ts
   features/
     locate/                  # P0: locate file in explorer
-    editor/                  # P2: editor command, gated by setting (default off)
+    editor/                  # P2: editor command, gated by setting
+    reviewFlow/              # comment navigation, context copy, comment badges
   shared/
     settings.ts              # single source of truth for chrome.storage settings
+    diagnostics.ts           # guarded debug logging and safe feature wrappers
     tooltip.ts, icons.ts, dom.ts, buttonFactory.ts, stickyHeader.ts, constants.ts
   styles/content.css         # injected on PR pages
   popup/                     # React + Tailwind + shadcn quick-toggle popup
@@ -103,6 +105,16 @@ On a PR page, all on by default:
 - Current-file comment status in the review rail.
 - Subtle file-explorer dots for files with visible review comments.
 
+## Current Feature Matrix
+
+| Feature | Default | Control surface | Notes |
+| --- | --- | --- | --- |
+| Locate file in explorer | On | Toolbar popup | Adds an icon to each file header and scrolls `#pr-file-tree` to the matching file. |
+| Back to top | On | Toolbar popup | Click and Shift-click targets are configurable. |
+| Review flow rail | On | Toolbar popup | Next comment, next unviewed file, copy review context, and current-file comment status. |
+| Comment dots | On with review flow | Toolbar popup | Adds a subtle dot to files with visible review comments. |
+| Editor command copy | On | Options page | First use prompts for repo root; direct editor opening is not implemented yet. |
+
 ## Settings
 
 All settings live in `chrome.storage.local` under the `prFileExplorer.*` namespace. Two surfaces edit them:
@@ -143,6 +155,22 @@ You can also configure (or fully disable) it from the options page (`chrome://ex
 12. Use the review rail to jump to the next comment, jump to the next unviewed file, or copy Markdown review context.
 13. Confirm files with visible review threads get a subtle dot in the file explorer.
 
+### Live PR QA Checklist
+
+- Large PR: locate icon scrolls the file explorer correctly, back-to-top works, and floating controls do not cover GitHub review buttons.
+- PR with comments: next comment jumps through visible threads, current-file status changes while scrolling, and sidebar dots only appear on commented files.
+- Viewed state: next unviewed enables when any file is `Not Viewed`, disables when none are visible, and lands on the expected file.
+- File explorer states: visible, filtered, collapsed/missing, and duplicate basenames in different folders.
+- Settings: review-flow toggle removes/restores the rail and dots; locate and back-to-top toggles remove/restore their controls.
+
+Debug logging can be enabled in the page console with:
+
+```js
+localStorage.setItem("prFileExplorer.debug", "true")
+```
+
+Reload the PR page after changing it. Debug output is console-only and never shown in the UI.
+
 ## Legacy Userscript
 
 The original Tampermonkey-style userscript still lives at:
@@ -177,8 +205,7 @@ https://github.com/MoveoTech/avi-cranes-app/pull/1779/changes
 
 ## Next Build Steps
 
-1. Test the extension against a live PR.
-2. Add better handling for collapsed or filtered file trees.
+1. Test the hardened extension against several live PRs.
+2. Add sticky working-file tabs (P3).
 3. Add direct protocol opening for Cursor and VS Code behind a setting.
-4. Add sticky working-file tabs (P3).
-
+4. Add automated browser coverage only if live QA finds repeated regressions.
