@@ -21,6 +21,10 @@ import {
   type ScrollTarget,
   type Settings,
 } from "@/shared/settings";
+import {
+  eventToShortcut,
+  formatShortcut,
+} from "@/shared/shortcut";
 
 const SCROLL_OPTIONS: ReadonlyArray<SegmentedOption<ScrollTarget>> = [
   { value: "filesTop", label: "Files top" },
@@ -187,6 +191,100 @@ export function Popup(): ReactElement {
         >
           <ArrowLeftRight className="mr-1 h-3 w-3" />
           Swap click and shift-click
+        </Button>
+      </div>
+
+      <Separator />
+
+      <Row
+        id="page-top-shortcut-enabled"
+        title="Scroll-to-top shortcut"
+        description="Keyboard shortcut that scrolls to the very top of the page."
+        checked={settings.pageTopShortcutEnabled}
+        onCheckedChange={(value) =>
+          void update({ pageTopShortcutEnabled: value })
+        }
+      />
+
+      <ShortcutCapture
+        value={settings.pageTopShortcut}
+        disabled={!settings.pageTopShortcutEnabled}
+        onChange={(value) => void update({ pageTopShortcut: value })}
+        onReset={() =>
+          void update({ pageTopShortcut: DEFAULT_SETTINGS.pageTopShortcut })
+        }
+      />
+    </div>
+  );
+}
+
+interface ShortcutCaptureProps {
+  value: string;
+  disabled: boolean;
+  onChange: (next: string) => void;
+  onReset: () => void;
+}
+
+function ShortcutCapture({
+  value,
+  disabled,
+  onChange,
+  onReset,
+}: ShortcutCaptureProps): ReactElement {
+  const [capturing, setCapturing] = useState(false);
+
+  useEffect(() => {
+    if (!capturing) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setCapturing(false);
+        return;
+      }
+
+      const parsed = eventToShortcut(event);
+      if (!parsed) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      onChange(formatShortcut(parsed));
+      setCapturing(false);
+    };
+
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => window.removeEventListener("keydown", handleKeyDown, true);
+  }, [capturing, onChange]);
+
+  return (
+    <div className="space-y-2 pl-1">
+      <Label className="text-xs text-muted-foreground">Shortcut</Label>
+      <div className="flex items-center gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="xs"
+          className="flex-1 justify-center font-mono"
+          disabled={disabled}
+          onClick={() => setCapturing((prev) => !prev)}
+        >
+          {capturing ? "Press keys… (Esc to cancel)" : value || "Set shortcut"}
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="xs"
+          disabled={disabled}
+          onClick={() => {
+            setCapturing(false);
+            onReset();
+          }}
+        >
+          Reset
         </Button>
       </div>
     </div>
