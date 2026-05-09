@@ -153,13 +153,22 @@ As a reviewer, I want sticky tabs for recently viewed files so I can jump back a
 
 ## P3: Commenting Flow Helpers
 
-Possible later features:
+Best-effort DOM helpers:
 
 1. Jump to next unresolved review comment.
 2. Mark files with comments in the file explorer.
 3. Show whether the current file has unresolved threads.
 4. Jump to the next unviewed file.
 5. Copy review context: file path, selected lines, and PR URL.
+
+### Prototype Behavior
+
+- A compact floating review rail appears on PR files pages.
+- The rail includes next comment, next unviewed file, and copy review context actions.
+- Review context is copied as Markdown with file path, inferred line/range, PR URL, and selected text when present.
+- Files with visible review threads receive a subtle dot in the file explorer.
+- Current-file status shows no comments, comments, or unresolved only when the DOM exposes a confident resolve action.
+- If unresolved state is uncertain, the feature treats the item as a comment rather than claiming unresolved.
 
 ## Non-Goals For The First Prototype
 

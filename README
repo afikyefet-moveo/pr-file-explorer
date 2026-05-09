@@ -85,6 +85,7 @@ npm run typecheck
 Toolbar popup (click the extension icon while on any page):
 
 - Toggle the "locate file in explorer" icon on/off.
+- Toggle the review-flow rail on/off, with inline explanations for next comment, next unviewed, and copy context.
 - Toggle the floating back-to-top button on/off.
 - Pick what plain click vs Shift-click does for back-to-top: jump to **Files top** or **Page top**, independently configurable.
 - Swap the two with one click.
@@ -98,6 +99,9 @@ On a PR page, all on by default:
 - Mutation observer keeps newly-rendered diff headers enhanced as GitHub paginates.
 - Floating back-to-top button after scrolling down.
 - Terminal icon that copies a `cursor -g` or `code -g` command for the file at the visible right-side line. The first click prompts for the local repo root.
+- Compact review rail with next comment, next unviewed file, and copy review context actions.
+- Current-file comment status in the review rail.
+- Subtle file-explorer dots for files with visible review comments.
 
 ## Settings
 
@@ -113,6 +117,7 @@ prFileExplorer.locateEnabled
 prFileExplorer.backToTopEnabled
 prFileExplorer.backToTopClickAction         # "filesTop" | "pageTop"
 prFileExplorer.backToTopShiftClickAction    # "filesTop" | "pageTop"
+prFileExplorer.reviewFlowEnabled
 prFileExplorer.editorEnabled
 prFileExplorer.editor                       # "cursor" | "code"
 prFileExplorer.repoRoot
@@ -135,6 +140,8 @@ You can also configure (or fully disable) it from the options page (`chrome://ex
 9. Open the toolbar popup, swap the click and shift-click bindings, then test that the behavior flips.
 10. Toggle the locate feature off in the popup and confirm the icons disappear from file headers.
 11. (Optional) Enable the editor command icon in options, then click it on a file header and confirm a command like `cursor -g "/path/to/repo/file.ts:123"` is copied.
+12. Use the review rail to jump to the next comment, jump to the next unviewed file, or copy Markdown review context.
+13. Confirm files with visible review threads get a subtle dot in the file explorer.
 
 ## Legacy Userscript
 
@@ -174,3 +181,4 @@ https://github.com/MoveoTech/avi-cranes-app/pull/1779/changes
 2. Add better handling for collapsed or filtered file trees.
 3. Add direct protocol opening for Cursor and VS Code behind a setting.
 4. Add sticky working-file tabs (P3).
+

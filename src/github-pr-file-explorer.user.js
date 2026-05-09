@@ -15,6 +15,10 @@
   var BUTTON_CLASS = "pr-file-explorer-locate-button";
   var EDITOR_BUTTON_CLASS = "pr-file-explorer-editor-button";
   var TOP_BUTTON_CLASS = "pr-file-explorer-top-button";
+  var REVIEW_RAIL_CLASS = "pr-file-explorer-review-rail";
+  var REVIEW_BUTTON_CLASS = "pr-file-explorer-review-button";
+  var REVIEW_STATUS_CLASS = "pr-file-explorer-review-status";
+  var COMMENT_BADGE_CLASS = "pr-file-explorer-comment-badge";
   var TOOLTIP_CLASS = "pr-file-explorer-tooltip";
   var HIGHLIGHT_CLASS = "pr-file-explorer-highlight";
   var STYLE_ID = "pr-file-explorer-enhancer-style";
@@ -28,6 +32,8 @@
     injectStyles();
     enhanceFileHeaders();
     installGoToTopButton();
+    installReviewFlowRail();
+    refreshReviewFlow();
     observeGitHubUpdates();
   }
 
@@ -77,6 +83,68 @@
       "}",
       "." + TOP_BUTTON_CLASS + "[data-visible='true'] {",
       "  display: inline-flex;",
+      "}",
+      "." + REVIEW_RAIL_CLASS + " {",
+      "  align-items: center;",
+      "  bottom: calc(max(24px, env(safe-area-inset-bottom)) + 40px);",
+      "  display: none;",
+      "  flex-direction: column;",
+      "  gap: 6px;",
+      "  position: fixed;",
+      "  right: max(24px, env(safe-area-inset-right));",
+      "  z-index: 80;",
+      "}",
+      "." + REVIEW_RAIL_CLASS + "[data-visible='true'] {",
+      "  display: flex;",
+      "}",
+      "." + REVIEW_BUTTON_CLASS + " {",
+      "  align-items: center;",
+      "  box-shadow: var(--shadow-floating-small, 0 8px 24px rgba(140, 149, 159, 0.2));",
+      "  display: inline-flex;",
+      "  height: 32px;",
+      "  justify-content: center;",
+      "  width: 32px;",
+      "}",
+      "." + REVIEW_BUTTON_CLASS + "[data-state='copied'] {",
+      "  color: var(--fgColor-success, var(--color-success-fg));",
+      "}",
+      "." + REVIEW_BUTTON_CLASS + "[data-state='error'] {",
+      "  color: var(--fgColor-danger, var(--color-danger-fg));",
+      "}",
+      "." + REVIEW_BUTTON_CLASS + ":disabled {",
+      "  cursor: default;",
+      "  opacity: 0.55;",
+      "}",
+      "." + REVIEW_STATUS_CLASS + " {",
+      "  align-items: center;",
+      "  background: var(--bgColor-default, var(--color-canvas-default));",
+      "  border: 1px solid var(--borderColor-default, var(--color-border-default));",
+      "  border-radius: 999px;",
+      "  box-shadow: var(--shadow-floating-small, 0 8px 24px rgba(140, 149, 159, 0.2));",
+      "  color: var(--fgColor-muted, var(--color-fg-muted));",
+      "  display: inline-flex;",
+      "  font-size: 11px;",
+      "  font-weight: 600;",
+      "  height: 22px;",
+      "  justify-content: center;",
+      "  line-height: 1;",
+      "  min-width: 22px;",
+      "  padding: 0 7px;",
+      "}",
+      "." + REVIEW_STATUS_CLASS + "[data-state='comments'] {",
+      "  color: var(--fgColor-accent, var(--color-accent-fg));",
+      "}",
+      "." + REVIEW_STATUS_CLASS + "[data-state='unresolved'] {",
+      "  color: var(--fgColor-danger, var(--color-danger-fg));",
+      "}",
+      "." + COMMENT_BADGE_CLASS + " {",
+      "  background: var(--fgColor-accent, var(--color-accent-fg));",
+      "  border-radius: 999px;",
+      "  display: inline-block;",
+      "  flex: 0 0 auto;",
+      "  height: 6px;",
+      "  margin-left: 6px;",
+      "  width: 6px;",
       "}",
       "." + TOOLTIP_CLASS + " {",
       "  background: var(--bgColor-emphasis, var(--color-neutral-emphasis-plus));",
@@ -459,6 +527,482 @@
     tooltip.style.top = top + "px";
   }
 
+  function installReviewFlowRail() {
+    if (document.querySelector("." + REVIEW_RAIL_CLASS)) {
+      return;
+    }
+
+    var rail = document.createElement("div");
+    rail.className = REVIEW_RAIL_CLASS;
+    rail.dataset.visible = "false";
+
+    var status = document.createElement("span");
+    status.className = REVIEW_STATUS_CLASS;
+    status.textContent = "0";
+    status.dataset.state = "none";
+    installTooltip(status, "No comments in current file");
+
+    rail.appendChild(status);
+    rail.appendChild(
+      createReviewRailButton("next-comment", "Next comment", getCommentIconSvg(), jumpToNextComment)
+    );
+    rail.appendChild(
+      createReviewRailButton(
+        "next-unviewed",
+        "Next unviewed file",
+        getUnviewedIconSvg(),
+        jumpToNextUnviewedFile
+      )
+    );
+    rail.appendChild(
+      createReviewRailButton(
+        "copy-context",
+        "Copy review context",
+        getCopyContextIconSvg(),
+        copyReviewContext
+      )
+    );
+    document.body.appendChild(rail);
+
+    window.addEventListener(
+      "scroll",
+      function onScroll() {
+        refreshReviewFlow();
+      },
+      { passive: true }
+    );
+  }
+
+  function createReviewRailButton(action, label, iconSvg, handler) {
+    var button = document.createElement("button");
+    button.type = "button";
+    button.className =
+      "prc-Button-ButtonBase-9n-Xk prc-Button-IconButton-fyge7 " + REVIEW_BUTTON_CLASS;
+    button.setAttribute("data-component", "IconButton");
+    button.setAttribute("data-loading", "false");
+    button.setAttribute("data-size", "small");
+    button.setAttribute("data-variant", "default");
+    button.setAttribute("aria-label", label);
+    button.dataset.reviewAction = action;
+    button.title = label;
+    button.innerHTML = iconSvg;
+    installTooltip(button, label);
+    button.addEventListener("click", function onClick(event) {
+      event.preventDefault();
+      event.stopPropagation();
+      handler(button);
+    });
+    return button;
+  }
+
+  function refreshReviewFlow() {
+    var rail = document.querySelector("." + REVIEW_RAIL_CLASS);
+    if (rail) {
+      rail.dataset.visible = getDiffRegions().length ? "true" : "false";
+      updateReviewRailButtons(rail);
+    }
+
+    markFilesWithComments();
+  }
+
+  function updateReviewRailButtons(rail) {
+    var currentRegion = getCurrentDiffRegion();
+    var status = rail.querySelector("." + REVIEW_STATUS_CLASS);
+    var nextCommentButton = rail.querySelector("[data-review-action='next-comment']");
+    var nextUnviewedButton = rail.querySelector("[data-review-action='next-unviewed']");
+    var copyContextButton = rail.querySelector("[data-review-action='copy-context']");
+
+    setReviewButtonState(
+      nextCommentButton,
+      getCommentTargets().length > 0,
+      getCommentTargets().length ? "Next comment" : "No comments"
+    );
+    setReviewButtonState(
+      nextUnviewedButton,
+      getUnviewedRegions().length > 0,
+      getUnviewedRegions().length ? "Next unviewed file" : "No unviewed files"
+    );
+    setReviewButtonState(
+      copyContextButton,
+      Boolean(currentRegion),
+      currentRegion ? "Copy review context" : "No current file"
+    );
+    updateCurrentFileCommentStatus(status, currentRegion);
+  }
+
+  function setReviewButtonState(button, enabled, tooltip) {
+    if (!button) {
+      return;
+    }
+
+    button.disabled = !enabled;
+    button.title = tooltip;
+    button.dataset.prFileExplorerTooltip = tooltip;
+  }
+
+  function updateCurrentFileCommentStatus(status, region) {
+    if (!status) {
+      return;
+    }
+
+    if (!region) {
+      status.textContent = "0";
+      status.dataset.state = "none";
+      status.dataset.prFileExplorerTooltip = "No current file";
+      return;
+    }
+
+    if (hasUnresolvedThread(region)) {
+      status.textContent = "!";
+      status.dataset.state = "unresolved";
+      status.dataset.prFileExplorerTooltip = "Current file has unresolved review threads";
+      return;
+    }
+
+    if (getCommentTargetsForRegion(region).length) {
+      status.textContent = "C";
+      status.dataset.state = "comments";
+      status.dataset.prFileExplorerTooltip = "Current file has review comments";
+      return;
+    }
+
+    status.textContent = "0";
+    status.dataset.state = "none";
+    status.dataset.prFileExplorerTooltip = "No comments in current file";
+  }
+
+  function getDiffRegions() {
+    return Array.prototype.slice
+      .call(document.querySelectorAll("[role='region'][id^='diff-']"))
+      .filter(function hasPath(region) {
+        return Boolean(getFilePathFromRegion(region));
+      });
+  }
+
+  function getCurrentDiffRegion() {
+    var viewportTop = getStickyHeaderOffset();
+    var viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+    var viewportMiddle = viewportTop + (viewportHeight - viewportTop) / 2;
+    var regions = getDiffRegions();
+
+    return (
+      regions.find(function containsMiddle(region) {
+        var rect = region.getBoundingClientRect();
+        return rect.top <= viewportMiddle && rect.bottom >= viewportMiddle;
+      }) ||
+      regions.find(function isVisible(region) {
+        var rect = region.getBoundingClientRect();
+        return rect.bottom > viewportTop && rect.top < viewportHeight;
+      }) ||
+      null
+    );
+  }
+
+  function getFilePathFromRegion(region) {
+    return getFilePathFromHeader(region);
+  }
+
+  function getCommentTargets() {
+    var targets = getAllCommentTargets();
+    var unresolved = targets.filter(function isUnresolved(target) {
+      return isUnresolvedThread(target.element);
+    });
+    return unresolved.length ? unresolved : targets;
+  }
+
+  function getAllCommentTargets() {
+    var threadNodes = Array.prototype.slice.call(
+      document.querySelectorAll("[data-testid='review-thread'], [data-marker-navigation-comment-thread-id]")
+    );
+    return threadNodes
+      .map(function toTarget(node) {
+        var target =
+          node.closest("[data-testid='review-thread']") ||
+          node.closest("[data-marker-navigation-comment-thread-id]") ||
+          node;
+        var region = target.closest("[role='region'][id^='diff-']");
+        return region ? { element: target, region: region } : null;
+      })
+      .filter(Boolean)
+      .filter(function uniqueTarget(target, index, list) {
+        return (
+          list.findIndex(function sameElement(other) {
+            return other.element === target.element;
+          }) === index
+        );
+      });
+  }
+
+  function getCommentTargetsForRegion(region) {
+    return getAllCommentTargets().filter(function isSameRegion(target) {
+      return target.region === region;
+    });
+  }
+
+  function hasUnresolvedThread(region) {
+    return getCommentTargetsForRegion(region).some(function targetHasUnresolved(target) {
+      return isUnresolvedThread(target.element);
+    });
+  }
+
+  function isUnresolvedThread(thread) {
+    var buttons = Array.prototype.slice.call(thread.querySelectorAll("button, [role='button']"));
+    return buttons.some(function buttonLooksLikeResolve(button) {
+      var label = normalizePath(
+        button.getAttribute("aria-label") || button.textContent || button.getAttribute("title")
+      ).toLowerCase();
+      return label.indexOf("resolve") !== -1 && label.indexOf("unresolve") === -1;
+    });
+  }
+
+  function jumpToNextComment(button) {
+    var targets = getCommentTargets();
+    if (!targets.length) {
+      return;
+    }
+
+    var elements = targets.map(function toElement(target) {
+      return target.element;
+    });
+    var next = findNextElementByViewport(elements) || elements[0];
+    scrollToElement(next);
+    flashReviewButton(button, "copied", "Jumped to next comment");
+  }
+
+  function jumpToNextUnviewedFile(button) {
+    var regions = getUnviewedRegions();
+    if (!regions.length) {
+      return;
+    }
+
+    scrollToElement(findNextElementByViewport(regions) || regions[0]);
+    flashReviewButton(button, "copied", "Jumped to next unviewed file");
+  }
+
+  function getUnviewedRegions() {
+    return getDiffRegions().filter(function isUnviewed(region) {
+      return Boolean(
+        region.querySelector("button[aria-label='Not Viewed']") ||
+          Array.prototype.slice.call(region.querySelectorAll("button[aria-pressed='false']")).find(
+            function hasViewedText(button) {
+              return normalizePath(button.textContent).indexOf("Viewed") !== -1;
+            }
+          )
+      );
+    });
+  }
+
+  function findNextElementByViewport(elements) {
+    var viewportTop = getStickyHeaderOffset();
+    var afterCurrent = elements
+      .map(function withTop(element) {
+        return {
+          element: element,
+          top: element.getBoundingClientRect().top,
+        };
+      })
+      .filter(function isAfterCurrent(entry) {
+        return entry.top > viewportTop + 24;
+      })
+      .sort(function sortByTop(a, b) {
+        return a.top - b.top;
+      });
+
+    return afterCurrent.length ? afterCurrent[0].element : null;
+  }
+
+  function scrollToElement(element) {
+    var targetTop = element.getBoundingClientRect().top + window.scrollY - getStickyHeaderOffset() - 12;
+    window.scrollTo({
+      top: Math.max(0, targetTop),
+      behavior: "smooth",
+    });
+  }
+
+  function copyReviewContext(button) {
+    var region = getCurrentDiffRegion();
+    if (!region) {
+      flashReviewButton(button, "error", "No current file");
+      return;
+    }
+
+    copyText(buildReviewContextMarkdown(getReviewContext(region)))
+      .then(function onCopied() {
+        flashReviewButton(button, "copied", "Copied review context");
+      })
+      .catch(function onError() {
+        flashReviewButton(button, "error", "Could not copy review context");
+      });
+  }
+
+  function getReviewContext(region) {
+    var selectedLines = getSelectedRightSideLines(region);
+    var visibleLine = getFirstVisibleRightSideLine(region);
+    var lineNumbers = selectedLines.length ? selectedLines : visibleLine ? [visibleLine] : [];
+
+    return {
+      filePath: getFilePathFromRegion(region),
+      lineLabel: formatLineLabel(lineNumbers),
+      selectedText: normalizeSelectedText(window.getSelection ? window.getSelection().toString() : ""),
+      url: buildReviewContextUrl(region, lineNumbers[0]),
+    };
+  }
+
+  function getSelectedRightSideLines(region) {
+    return Array.prototype.slice
+      .call(region.querySelectorAll("[data-line-number][data-diff-side='right'][data-selected='true']"))
+      .map(function toLineNumber(cell) {
+        return normalizePath(cell.getAttribute("data-line-number"));
+      })
+      .filter(Boolean)
+      .filter(function uniqueLine(line, index, list) {
+        return list.indexOf(line) === index;
+      })
+      .sort(function sortNumeric(a, b) {
+        return Number(a) - Number(b);
+      });
+  }
+
+  function getFirstVisibleRightSideLine(region) {
+    var cells = Array.prototype.slice.call(
+      region.querySelectorAll("[data-line-number][data-diff-side='right']")
+    );
+    var viewportTop = getStickyHeaderOffset();
+    var viewportBottom = window.innerHeight || document.documentElement.clientHeight;
+    var visible = cells.find(function isVisible(cell) {
+      var rect = cell.getBoundingClientRect();
+      return rect.bottom > viewportTop && rect.top < viewportBottom;
+    });
+
+    return visible ? normalizePath(visible.getAttribute("data-line-number")) : "";
+  }
+
+  function formatLineLabel(lines) {
+    if (!lines.length) {
+      return "";
+    }
+
+    if (lines.length === 1) {
+      return "R" + lines[0];
+    }
+
+    return "R" + lines[0] + "-R" + lines[lines.length - 1];
+  }
+
+  function buildReviewContextUrl(region, lineNumber) {
+    var url = new URL(window.location.href);
+    url.hash = lineNumber ? region.id + "R" + lineNumber : region.id;
+    return url.toString();
+  }
+
+  function buildReviewContextMarkdown(context) {
+    var lines = ["### Review context", "", "File: `" + context.filePath + "`"];
+
+    if (context.lineLabel) {
+      lines.push("Line: " + context.lineLabel);
+    }
+
+    lines.push("PR: " + context.url);
+
+    if (context.selectedText) {
+      lines.push("", "Selected text:", "", "```", context.selectedText, "```");
+    }
+
+    return lines.join("\n");
+  }
+
+  function normalizeSelectedText(text) {
+    return String(text || "").trim();
+  }
+
+  function markFilesWithComments() {
+    var commentedPaths = getCommentedFilePaths();
+    Array.prototype.slice.call(document.querySelectorAll("." + COMMENT_BADGE_CLASS)).forEach(
+      function removeStaleBadge(badge) {
+        if (commentedPaths.indexOf(badge.dataset.filePath) === -1) {
+          badge.remove();
+        }
+      }
+    );
+
+    commentedPaths.forEach(function markPath(filePath) {
+      var treeItem = findFileTreeItem(filePath);
+      if (!treeItem || treeItem.querySelector("." + COMMENT_BADGE_CLASS)) {
+        return;
+      }
+
+      var textContainer = treeItem.querySelector("[class*='TreeViewItemContentText']") || treeItem;
+      var badge = document.createElement("span");
+      badge.className = COMMENT_BADGE_CLASS;
+      badge.dataset.filePath = filePath;
+      badge.setAttribute("aria-label", "Has review comments");
+      badge.title = "Has review comments";
+      installTooltip(badge, "Has review comments");
+      textContainer.appendChild(badge);
+    });
+  }
+
+  function getCommentedFilePaths() {
+    return getAllCommentTargets()
+      .map(function toPath(target) {
+        return getFilePathFromRegion(target.region);
+      })
+      .filter(Boolean)
+      .filter(function uniquePath(path, index, list) {
+        return list.indexOf(path) === index;
+      });
+  }
+
+  function flashReviewButton(button, state, title) {
+    if (!button) {
+      return;
+    }
+
+    button.dataset.state = state;
+    button.title = title;
+    button.dataset.prFileExplorerTooltip = title;
+    window.setTimeout(function resetButton() {
+      button.dataset.state = "";
+      refreshReviewFlow();
+    }, 1400);
+  }
+
+  function getCommentIconSvg() {
+    return [
+      '<svg data-component="Octicon" aria-hidden="true" focusable="false"',
+      ' class="octicon octicon-comment-discussion" viewBox="0 0 16 16" width="16" height="16"',
+      ' fill="currentColor" display="inline-block" overflow="visible"',
+      ' style="vertical-align: text-bottom;">',
+      '<path d="M1.75 1h8.5c.966 0 1.75.784 1.75 1.75v5.5A1.75 1.75 0 0 1 10.25 10H7.061l-2.574 2.573A1.458 1.458 0 0 1 2 11.543V10h-.25A1.75 1.75 0 0 1 0 8.25v-5.5C0 1.784.784 1 1.75 1Zm0 1.5a.25.25 0 0 0-.25.25v5.5c0 .138.112.25.25.25h1a.75.75 0 0 1 .75.75v2.19l2.72-2.72a.749.749 0 0 1 .53-.22h3.5a.25.25 0 0 0 .25-.25v-5.5a.25.25 0 0 0-.25-.25Z"></path>',
+      '<path d="M14.25 4h-.75v1.5h.75c.138 0 .25.112.25.25v5.5a.25.25 0 0 1-.25.25h-1a.75.75 0 0 0-.75.75v1.19l-1.72-1.72a.749.749 0 0 0-.53-.22H6.5v1.5h3.439l1.574 1.573A1.458 1.458 0 0 0 14 13.543V13h.25A1.75 1.75 0 0 0 16 11.25v-5.5A1.75 1.75 0 0 0 14.25 4Z"></path>',
+      "</svg>",
+    ].join("");
+  }
+
+  function getUnviewedIconSvg() {
+    return [
+      '<svg data-component="Octicon" aria-hidden="true" focusable="false"',
+      ' class="octicon octicon-eye" viewBox="0 0 16 16" width="16" height="16"',
+      ' fill="currentColor" display="inline-block" overflow="visible"',
+      ' style="vertical-align: text-bottom;">',
+      '<path d="M8 2c2.878 0 5.378 1.621 6.635 4.001a.75.75 0 0 1 0 .698C13.378 9.079 10.878 10.7 8 10.7S2.622 9.079 1.365 6.699a.75.75 0 0 1 0-.698C2.622 3.621 5.122 2 8 2Zm0 1.5c-2.105 0-4.026 1.092-5.092 2.85C3.974 8.108 5.895 9.2 8 9.2s4.026-1.092 5.092-2.85C12.026 4.592 10.105 3.5 8 3.5Z"></path>',
+      '<path d="M8 4.5a1.85 1.85 0 1 1 0 3.7 1.85 1.85 0 0 1 0-3.7Z"></path>',
+      "</svg>",
+    ].join("");
+  }
+
+  function getCopyContextIconSvg() {
+    return [
+      '<svg data-component="Octicon" aria-hidden="true" focusable="false"',
+      ' class="octicon octicon-copy" viewBox="0 0 16 16" width="16" height="16"',
+      ' fill="currentColor" display="inline-block" overflow="visible"',
+      ' style="vertical-align: text-bottom;">',
+      '<path d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 0 1 0 1.5h-1.5a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-1.5a.75.75 0 0 1 1.5 0v1.5A1.75 1.75 0 0 1 9.25 16h-7.5A1.75 1.75 0 0 1 0 14.25Z"></path>',
+      '<path d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0 1 14.25 11h-7.5A1.75 1.75 0 0 1 5 9.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z"></path>',
+      "</svg>",
+    ].join("");
+  }
+
   function copyEditorCommand(button, header) {
     var config = getEditorCommandConfig();
     if (!config.repoRoot) {
@@ -651,7 +1195,10 @@
     var timeoutId = 0;
     var observer = new MutationObserver(function onMutation() {
       window.clearTimeout(timeoutId);
-      timeoutId = window.setTimeout(enhanceFileHeaders, OBSERVER_DEBOUNCE_MS);
+      timeoutId = window.setTimeout(function refreshEnhancements() {
+        enhanceFileHeaders();
+        refreshReviewFlow();
+      }, OBSERVER_DEBOUNCE_MS);
     });
 
     observer.observe(document.body, {

@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactElement } from "react";
-import { ArrowLeftRight, Loader2 } from "lucide-react";
+import { ArrowLeftRight, Copy, Eye, Loader2, MessageSquareText } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -74,6 +74,38 @@ export function Popup(): ReactElement {
           Quick toggles for the GitHub PR review helpers.
         </p>
       </header>
+
+      <Separator />
+
+      <Row
+        id="review-flow-enabled"
+        title="Review flow rail"
+        description="Show comment navigation, unviewed-file jump, review context copy, and comment dots."
+        checked={settings.reviewFlowEnabled}
+        onCheckedChange={(value) => void update({ reviewFlowEnabled: value })}
+      />
+
+      <div className="space-y-2 rounded-md border bg-muted/35 p-3">
+        <p className="text-xs font-medium">Review rail controls</p>
+        <FeatureHint
+          icon={<MessageSquareText className="h-3.5 w-3.5" />}
+          title="Next comment"
+          description="Jumps to the next visible review thread. Unresolved threads are prioritized only when GitHub exposes that state clearly."
+        />
+        <FeatureHint
+          icon={<Eye className="h-3.5 w-3.5" />}
+          title="Next unviewed"
+          description="Jumps to the next file GitHub still marks as Not Viewed."
+        />
+        <FeatureHint
+          icon={<Copy className="h-3.5 w-3.5" />}
+          title="Copy context"
+          description="Copies Markdown with file path, inferred line or range, PR URL, and selected text when present."
+        />
+        <p className="text-[11px] leading-snug text-muted-foreground">
+          Files with visible review comments get a small dot in the file explorer.
+        </p>
+      </div>
 
       <Separator />
 
@@ -165,6 +197,30 @@ function Row({
         onCheckedChange={onCheckedChange}
         className="mt-0.5"
       />
+    </div>
+  );
+}
+
+interface FeatureHintProps {
+  icon: ReactElement;
+  title: string;
+  description: string;
+}
+
+function FeatureHint({
+  icon,
+  title,
+  description,
+}: FeatureHintProps): ReactElement {
+  return (
+    <div className="flex gap-2 text-xs">
+      <span className="mt-0.5 text-muted-foreground">{icon}</span>
+      <span className="space-y-0.5">
+        <span className="block font-medium leading-tight">{title}</span>
+        <span className="block leading-snug text-muted-foreground">
+          {description}
+        </span>
+      </span>
     </div>
   );
 }

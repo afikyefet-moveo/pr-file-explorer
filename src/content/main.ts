@@ -10,6 +10,11 @@ import {
   type GoToTopController,
 } from "./goToTopButton";
 import { observeGitHubUpdates } from "./observeGitHubUpdates";
+import {
+  installReviewFlowRail,
+  refreshReviewFlow,
+  uninstallReviewFlowRail,
+} from "../features/reviewFlow/reviewFlow";
 
 let cachedSettings: Settings | null = null;
 let goToTop: GoToTopController | null = null;
@@ -29,6 +34,7 @@ async function init(): Promise<void> {
 function applyAll(): void {
   applyEnhancements();
   applyGoToTop();
+  applyReviewFlow();
 }
 
 function applyEnhancements(): void {
@@ -39,6 +45,9 @@ function applyEnhancements(): void {
     withLocateButton: cachedSettings.locateEnabled,
     withEditorButton: cachedSettings.editorEnabled,
   });
+  if (cachedSettings.reviewFlowEnabled) {
+    refreshReviewFlow();
+  }
 }
 
 function applyGoToTop(): void {
@@ -63,6 +72,20 @@ function applyGoToTop(): void {
   }
 
   goToTop = installGoToTopButton(bindings);
+}
+
+function applyReviewFlow(): void {
+  if (!cachedSettings) {
+    return;
+  }
+
+  if (!cachedSettings.reviewFlowEnabled) {
+    uninstallReviewFlowRail();
+    return;
+  }
+
+  installReviewFlowRail();
+  refreshReviewFlow();
 }
 
 if (document.readyState === "loading") {
