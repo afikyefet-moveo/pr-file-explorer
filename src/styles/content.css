@@ -141,10 +141,21 @@
   overflow-x: auto;
   padding: 0 4px;
   position: sticky;
+  scrollbar-color: transparent transparent;
   scrollbar-width: thin;
   top: var(--pr-file-explorer-sticky-top, 0px);
   width: 100%;
   z-index: 30;
+}
+
+.pr-file-explorer-tabs::-webkit-scrollbar {
+  background: transparent;
+  height: 8px;
+}
+
+.pr-file-explorer-tabs::-webkit-scrollbar-track,
+.pr-file-explorer-tabs::-webkit-scrollbar-thumb {
+  background: transparent;
 }
 
 .pr-file-explorer-tabs[data-visible="true"] {
@@ -177,6 +188,18 @@
   box-shadow: inset 0 -2px 0 0 var(--fgColor-accent, var(--color-accent-fg));
 }
 
+.pr-file-explorer-tab[data-dragging="true"] {
+  opacity: 0.45;
+}
+
+.pr-file-explorer-tab[data-drop-position="before"] {
+  box-shadow: inset 2px 0 0 0 var(--fgColor-accent, var(--color-accent-fg));
+}
+
+.pr-file-explorer-tab[data-drop-position="after"] {
+  box-shadow: inset -2px 0 0 0 var(--fgColor-accent, var(--color-accent-fg));
+}
+
 .pr-file-explorer-tab:hover {
   background: var(--control-transparent-bgColor-hover, var(--color-action-list-item-default-hover-bg));
   color: var(--fgColor-default, var(--color-fg-default));
@@ -206,6 +229,70 @@
 .pr-file-explorer-tab-close:hover {
   background: var(--control-transparent-bgColor-hover, var(--color-action-list-item-default-hover-bg));
   color: var(--fgColor-default, var(--color-fg-default));
+}
+
+.pr-file-explorer-tab-menu {
+  background-color: var(
+    --overlay-bgColor,
+    var(--bgColor-default, var(--color-canvas-default, #ffffff))
+  );
+  background-image: none;
+  border: 1px solid var(--borderColor-default, var(--color-border-default));
+  border-radius: 6px;
+  box-shadow: var(--shadow-floating-large, 0 8px 24px rgba(31, 35, 40, 0.18));
+  box-sizing: border-box;
+  color: var(--fgColor-default, var(--color-fg-default));
+  display: none;
+  min-width: 190px;
+  opacity: 1;
+  padding: 4px;
+  position: fixed;
+  z-index: 9998;
+}
+
+@media (prefers-color-scheme: dark) {
+  .pr-file-explorer-tab-menu {
+    background-color: var(
+      --overlay-bgColor,
+      var(--bgColor-default, var(--color-canvas-default, #1f2328))
+    );
+  }
+}
+
+.pr-file-explorer-tab-menu[data-visible="true"] {
+  display: block;
+}
+
+.pr-file-explorer-tab-menu-item {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  color: var(--fgColor-default, var(--color-fg-default));
+  cursor: pointer;
+  display: flex;
+  font: inherit;
+  font-size: 12px;
+  height: 28px;
+  padding: 0 8px;
+  text-align: left;
+  width: 100%;
+}
+
+.pr-file-explorer-tab-menu-item:hover:not(:disabled) {
+  background: var(--control-transparent-bgColor-hover, var(--color-action-list-item-default-hover-bg));
+}
+
+.pr-file-explorer-tab-menu-item:disabled {
+  color: var(--fgColor-muted, var(--color-fg-muted));
+  cursor: default;
+  opacity: 0.55;
+}
+
+.pr-file-explorer-tab-menu-separator {
+  background: var(--borderColor-muted, var(--color-border-muted));
+  height: 1px;
+  margin: 4px 0;
 }
 
 .pr-file-explorer-tooltip {

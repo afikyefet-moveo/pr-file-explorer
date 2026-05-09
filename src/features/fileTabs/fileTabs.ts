@@ -8,6 +8,7 @@ import {
   basename,
   getDiffRegions,
   getFilePathFromDiffRegion,
+  normalizePath,
   type FilePath,
 } from "../../shared/dom";
 import { getCloseIconSvg, getPinIconSvg } from "../../shared/icons";
@@ -25,11 +26,18 @@ const APPLIED_STICKY_OFFSET_KEY = "prFileExplorerAppliedStickyOffset";
 const HEADER_STICKY_OFFSET_PROPERTY = "--header-sticky-offset";
 const TABS_STICKY_TOP_PROPERTY = "--pr-file-explorer-sticky-top";
 const FILE_HEADER_GAP_PX = 4;
+const STORAGE_KEY_PREFIX = "prFileExplorer.fileTabs.";
+const TAB_CONTEXT_MENU_CLASS = "pr-file-explorer-tab-menu";
+const TAB_CONTEXT_MENU_ITEM_CLASS = "pr-file-explorer-tab-menu-item";
+const TAB_DRAG_DATA_TYPE = "application/x-pr-file-explorer-tab";
 
 const openFiles: OpenFile[] = [];
 let installed = false;
 let scrollListener: (() => void) | null = null;
 let resizeListener: (() => void) | null = null;
+let documentClickListener: ((event: MouseEvent) => void) | null = null;
+let documentKeydownListener: ((event: KeyboardEvent) => void) | null = null;
+let loadedStorageKey: string | null = null;
 
 export function installFileTabs(): void {
   if (installed) {
@@ -39,10 +47,137 @@ export function installFileTabs(): void {
   ensureBarMounted();
   scrollListener = () => onViewportChange();
   resizeListener = () => onViewportChange();
+  documentClickListener = (event) => {
+    const target = event.target as HTMLElement | null;
+    if (!target?.closest(`.${TAB_CONTEXT_MENU_CLASS}`)) {
+      hideTabContextMenu();
+    }
+  };
+  documentKeydownListener = (event) => {
+    if (event.key === "Escape") {
+      hideTabContextMenu();
+    }
+  };
   window.addEventListener("scroll", scrollListener, { passive: true });
   window.addEventListener("resize", resizeListener);
+  document.addEventListener("click", documentClickListener, true);
+  document.addEventListener("keydown", documentKeydownListener);
   installed = true;
   refreshFileTabs();
+}
+
+function syncOpenFilesWithStorageScope(): void {
+  const storageKey = getPrTabsStorageKey();
+  if (storageKey === loadedStorageKey) {
+    return;
+  }
+
+  loadedStorageKey = storageKey;
+  openFiles.splice(0, openFiles.length, ...loadOpenFiles(storageKey));
+}
+
+function getPrTabsStorageKey(): string | null {
+  const match = location.pathname.match(
+    /^\/([^/]+)\/([^/]+)\/pull\/(\d+)(?:\/|$)/
+  );
+  if (!match) {
+    return null;
+  }
+
+  const [, owner = "", repo = "", pullNumber = ""] = match;
+  return `${STORAGE_KEY_PREFIX}${[
+    location.hostname,
+    owner,
+    repo,
+    pullNumber,
+  ]
+    .map((part) => encodeURIComponent(part))
+    .join(":")}`;
+}
+
+function loadOpenFiles(storageKey: string | null): OpenFile[] {
+  if (!storageKey) {
+    return [];
+  }
+
+  try {
+    const raw = localStorage.getItem(storageKey);
+    if (!raw) {
+      return [];
+    }
+
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    const files: OpenFile[] = [];
+    for (const item of parsed) {
+      if (!isRecord(item)) {
+        continue;
+      }
+
+      const path = normalizePath(
+        typeof item["path"] === "string" ? item["path"] : ""
+      );
+      if (!path) {
+        continue;
+      }
+
+      const existingIndex = files.findIndex((file) => file.path === path);
+      if (existingIndex >= 0) {
+        files.splice(existingIndex, 1);
+      }
+
+      if (!item["pinned"]) {
+        const previewIndex = files.findIndex((file) => !file.pinned);
+        if (previewIndex >= 0) {
+          files.splice(previewIndex, 1);
+        }
+      }
+
+      files.push({
+        path,
+        diffId: typeof item["diffId"] === "string" ? item["diffId"] : "",
+        pinned: Boolean(item["pinned"]),
+      });
+    }
+
+    return files;
+  } catch {
+    return [];
+  }
+}
+
+function persistOpenFiles(): void {
+  const storageKey = loadedStorageKey ?? getPrTabsStorageKey();
+  if (!storageKey) {
+    return;
+  }
+
+  try {
+    if (!openFiles.length) {
+      localStorage.removeItem(storageKey);
+      return;
+    }
+
+    localStorage.setItem(
+      storageKey,
+      JSON.stringify(
+        openFiles.map((file) => ({
+          path: file.path,
+          diffId: file.diffId,
+          pinned: file.pinned,
+        }))
+      )
+    );
+  } catch {
+    // GitHub can run with storage disabled in some browser modes.
+  }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
 }
 
 export function refreshFileTabs(): void {
@@ -50,6 +185,7 @@ export function refreshFileTabs(): void {
     return;
   }
 
+  syncOpenFilesWithStorageScope();
   const bar = ensureBarMounted();
   enhanceFileHeadersForTabs();
   syncOpenFilesWithDom();
@@ -57,10 +193,13 @@ export function refreshFileTabs(): void {
   updatePinButtons();
   syncStickyLayout(bar);
   updateActiveTabState();
+  persistOpenFiles();
 }
 
 export function uninstallFileTabs(): void {
   document.querySelector<HTMLElement>(`.${FILE_TABS_BAR_CLASS}`)?.remove();
+  hideTabContextMenu();
+  getTabContextMenu()?.remove();
   document
     .querySelectorAll<HTMLElement>(`.${FILE_TAB_PIN_BUTTON_CLASS}`)
     .forEach((button) => button.remove());
@@ -73,9 +212,18 @@ export function uninstallFileTabs(): void {
     window.removeEventListener("resize", resizeListener);
     resizeListener = null;
   }
+  if (documentClickListener) {
+    document.removeEventListener("click", documentClickListener, true);
+    documentClickListener = null;
+  }
+  if (documentKeydownListener) {
+    document.removeEventListener("keydown", documentKeydownListener);
+    documentKeydownListener = null;
+  }
 
   resetFileHeaderOffsets();
   openFiles.splice(0, openFiles.length);
+  loadedStorageKey = null;
   installed = false;
 }
 
@@ -142,6 +290,13 @@ function createTabsBar(): HTMLElement {
   bar.dataset["visible"] = "false";
   bar.addEventListener("click", onTabsBarClick);
   bar.addEventListener("dblclick", onTabsBarDoubleClick);
+  bar.addEventListener("contextmenu", onTabsBarContextMenu);
+  bar.addEventListener("dragstart", onTabsBarDragStart);
+  bar.addEventListener("dragenter", onTabsBarDragEnter);
+  bar.addEventListener("dragover", onTabsBarDragOver);
+  bar.addEventListener("dragleave", onTabsBarDragLeave);
+  bar.addEventListener("drop", onTabsBarDrop);
+  bar.addEventListener("dragend", onTabsBarDragEnd);
   return bar;
 }
 
@@ -284,6 +439,7 @@ function createTab(file: OpenFile): HTMLElement {
   const tab = document.createElement("button");
   tab.type = "button";
   tab.className = FILE_TAB_CLASS;
+  tab.draggable = true;
   tab.dataset["filePath"] = file.path;
   tab.dataset["diffId"] = file.diffId;
   tab.dataset["pinned"] = file.pinned ? "true" : "false";
@@ -333,7 +489,7 @@ function onTabsBarClick(event: Event): void {
   }
 
   const diffId = tab.dataset["diffId"];
-  const region = diffId ? document.getElementById(diffId) : null;
+  const region = getRegionForTab(path, diffId);
   if (region) {
     scrollToRegion(region);
   }
@@ -357,12 +513,407 @@ function onTabsBarDoubleClick(event: Event): void {
   }
 }
 
+function onTabsBarContextMenu(event: MouseEvent): void {
+  const tab = getTabFromEvent(event);
+  const path = tab?.dataset["filePath"] as FilePath | undefined;
+  if (!path) {
+    return;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+  showTabContextMenu(path, event.clientX, event.clientY);
+}
+
+function onTabsBarDragStart(event: DragEvent): void {
+  const tab = getTabFromEvent(event);
+  const path = tab?.dataset["filePath"] as FilePath | undefined;
+  if (!tab || !path || openFiles.findIndex((file) => file.path === path) < 0) {
+    event.preventDefault();
+    return;
+  }
+
+  hideTabContextMenu();
+  tab.dataset["dragging"] = "true";
+  event.dataTransfer?.setData(TAB_DRAG_DATA_TYPE, path);
+  event.dataTransfer?.setData("text/plain", path);
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = "move";
+  }
+}
+
+function onTabsBarDragEnter(event: DragEvent): void {
+  const bar = event.currentTarget as HTMLElement | null;
+  if (!bar || !getDraggedTabPath(bar, event)) {
+    return;
+  }
+  event.preventDefault();
+}
+
+function onTabsBarDragLeave(event: DragEvent): void {
+  const bar = event.currentTarget as HTMLElement | null;
+  if (!bar) {
+    return;
+  }
+  const related = event.relatedTarget as Node | null;
+  if (!related || !bar.contains(related)) {
+    clearDropIndicator(bar);
+  }
+}
+
+function onTabsBarDragOver(event: DragEvent): void {
+  const bar = event.currentTarget as HTMLElement | null;
+  if (!bar || !getDraggedTabPath(bar, event)) {
+    return;
+  }
+
+  event.preventDefault();
+  if (event.dataTransfer) {
+    event.dataTransfer.dropEffect = "move";
+  }
+
+  scrollTabsBarForDrag(bar, event);
+  updateDropIndicator(bar, event);
+}
+
+function onTabsBarDrop(event: DragEvent): void {
+  const bar = event.currentTarget as HTMLElement | null;
+  const path = bar ? getDraggedTabPath(bar, event) : null;
+  if (!bar || !path) {
+    return;
+  }
+
+  event.preventDefault();
+  clearDragState(bar);
+  const fromIndex = openFiles.findIndex((file) => file.path === path);
+  moveOpenFile(fromIndex, getDropIndex(bar, event));
+}
+
+function onTabsBarDragEnd(event: DragEvent): void {
+  const bar = event.currentTarget as HTMLElement | null;
+  if (bar) {
+    clearDragState(bar);
+  }
+}
+
+function getTabFromEvent(event: Event): HTMLElement | null {
+  return (
+    (event.target as HTMLElement | null)?.closest<HTMLElement>(
+      `.${FILE_TAB_CLASS}`
+    ) ?? null
+  );
+}
+
+function getDraggedTabPath(
+  bar: HTMLElement,
+  event: DragEvent
+): FilePath | null {
+  const transferred =
+    event.dataTransfer?.getData(TAB_DRAG_DATA_TYPE) ??
+    event.dataTransfer?.getData("text/plain") ??
+    "";
+  const path =
+    transferred ||
+    bar.querySelector<HTMLElement>(`.${FILE_TAB_CLASS}[data-dragging="true"]`)
+      ?.dataset["filePath"];
+
+  return path ? (path as FilePath) : null;
+}
+
+function scrollTabsBarForDrag(bar: HTMLElement, event: DragEvent): void {
+  const rect = bar.getBoundingClientRect();
+  const edgeSize = 40;
+  if (event.clientX - rect.left < edgeSize) {
+    bar.scrollLeft -= 18;
+  } else if (rect.right - event.clientX < edgeSize) {
+    bar.scrollLeft += 18;
+  }
+}
+
+function getDroppableTabs(bar: HTMLElement): HTMLElement[] {
+  return Array.from(
+    bar.querySelectorAll<HTMLElement>(`.${FILE_TAB_CLASS}`)
+  ).filter((tab) => tab.dataset["dragging"] !== "true");
+}
+
+function updateDropIndicator(bar: HTMLElement, event: DragEvent): void {
+  clearDropIndicator(bar);
+
+  const tabs = getDroppableTabs(bar);
+  if (tabs.length === 0) {
+    return;
+  }
+
+  for (const tab of tabs) {
+    const rect = tab.getBoundingClientRect();
+    if (event.clientX < rect.left + rect.width / 2) {
+      tab.dataset["dropPosition"] = "before";
+      return;
+    }
+  }
+
+  const lastTab = tabs[tabs.length - 1];
+  if (lastTab) {
+    lastTab.dataset["dropPosition"] = "after";
+  }
+}
+
+function getDropIndex(bar: HTMLElement, event: DragEvent): number {
+  const tabs = getDroppableTabs(bar);
+  for (const tab of tabs) {
+    const rect = tab.getBoundingClientRect();
+    if (event.clientX < rect.left + rect.width / 2) {
+      const path = tab.dataset["filePath"] as FilePath | undefined;
+      const index = openFiles.findIndex((file) => file.path === path);
+      return index < 0 ? openFiles.length : index;
+    }
+  }
+  return openFiles.length;
+}
+
+function clearDragState(bar: HTMLElement): void {
+  bar.querySelectorAll<HTMLElement>(`.${FILE_TAB_CLASS}`).forEach((tab) => {
+    delete tab.dataset["dragging"];
+    delete tab.dataset["dropPosition"];
+  });
+}
+
+function clearDropIndicator(bar: HTMLElement): void {
+  bar.querySelectorAll<HTMLElement>(
+    `.${FILE_TAB_CLASS}[data-drop-position]`
+  ).forEach((tab) => {
+    delete tab.dataset["dropPosition"];
+  });
+}
+
+type TabContextCommand =
+  | "togglePinned"
+  | "close"
+  | "closeOthers"
+  | "closeLeft"
+  | "closeRight"
+  | "closeAll"
+  | "copyPath";
+
+function showTabContextMenu(path: FilePath, x: number, y: number): void {
+  const menu = ensureTabContextMenu();
+  const file = openFiles.find((candidate) => candidate.path === path);
+  const index = openFiles.findIndex((candidate) => candidate.path === path);
+  if (!file || index < 0) {
+    hideTabContextMenu();
+    return;
+  }
+
+  menu.dataset["filePath"] = path;
+  menu.replaceChildren(
+    createTabMenuItem(file.pinned ? "Unpin Tab" : "Pin Tab", "togglePinned"),
+    createTabMenuSeparator(),
+    createTabMenuItem("Close", "close"),
+    createTabMenuItem("Close Others", "closeOthers", openFiles.length <= 1),
+    createTabMenuItem("Close Tabs to the Left", "closeLeft", index === 0),
+    createTabMenuItem(
+      "Close Tabs to the Right",
+      "closeRight",
+      index === openFiles.length - 1
+    ),
+    createTabMenuItem("Close All", "closeAll"),
+    createTabMenuSeparator(),
+    createTabMenuItem("Copy Path", "copyPath")
+  );
+  menu.dataset["visible"] = "true";
+  menu.style.left = `${x}px`;
+  menu.style.top = `${y}px`;
+
+  const rect = menu.getBoundingClientRect();
+  const margin = 8;
+  menu.style.left = `${Math.max(
+    margin,
+    Math.min(x, window.innerWidth - rect.width - margin)
+  )}px`;
+  menu.style.top = `${Math.max(
+    margin,
+    Math.min(y, window.innerHeight - rect.height - margin)
+  )}px`;
+}
+
+function ensureTabContextMenu(): HTMLElement {
+  let menu = getTabContextMenu();
+  if (!menu) {
+    menu = document.createElement("div");
+    menu.className = TAB_CONTEXT_MENU_CLASS;
+    menu.dataset["visible"] = "false";
+    menu.setAttribute("role", "menu");
+    menu.addEventListener("click", onTabContextMenuClick);
+    document.body.appendChild(menu);
+  }
+  return menu;
+}
+
+function getTabContextMenu(): HTMLElement | null {
+  return document.querySelector<HTMLElement>(`.${TAB_CONTEXT_MENU_CLASS}`);
+}
+
+function createTabMenuItem(
+  label: string,
+  command: TabContextCommand,
+  disabled = false
+): HTMLButtonElement {
+  const item = document.createElement("button");
+  item.type = "button";
+  item.className = TAB_CONTEXT_MENU_ITEM_CLASS;
+  item.dataset["command"] = command;
+  item.disabled = disabled;
+  item.setAttribute("role", "menuitem");
+  item.textContent = label;
+  return item;
+}
+
+function createTabMenuSeparator(): HTMLElement {
+  const separator = document.createElement("div");
+  separator.className = "pr-file-explorer-tab-menu-separator";
+  separator.setAttribute("role", "separator");
+  return separator;
+}
+
+function onTabContextMenuClick(event: Event): void {
+  event.preventDefault();
+  event.stopPropagation();
+
+  const item = (event.target as HTMLElement | null)?.closest<HTMLButtonElement>(
+    `.${TAB_CONTEXT_MENU_ITEM_CLASS}`
+  );
+  if (!item || item.disabled) {
+    return;
+  }
+
+  const menu = item.closest<HTMLElement>(`.${TAB_CONTEXT_MENU_CLASS}`);
+  const path = menu?.dataset["filePath"] as FilePath | undefined;
+  const command = item.dataset["command"] as TabContextCommand | undefined;
+  if (!path || !command) {
+    hideTabContextMenu();
+    return;
+  }
+
+  runTabContextCommand(command, path);
+  hideTabContextMenu();
+}
+
+function runTabContextCommand(command: TabContextCommand, path: FilePath): void {
+  switch (command) {
+    case "togglePinned":
+      togglePinnedTab(path);
+      break;
+    case "close":
+      unpinFile(path);
+      break;
+    case "closeOthers":
+      closeOtherTabs(path);
+      break;
+    case "closeLeft":
+      closeTabsToLeft(path);
+      break;
+    case "closeRight":
+      closeTabsToRight(path);
+      break;
+    case "closeAll":
+      closeAllTabs();
+      break;
+    case "copyPath":
+      void navigator.clipboard?.writeText(path).catch(() => undefined);
+      break;
+  }
+}
+
+function hideTabContextMenu(): void {
+  const menu = getTabContextMenu();
+  if (!menu) {
+    return;
+  }
+
+  menu.dataset["visible"] = "false";
+  delete menu.dataset["filePath"];
+}
+
 function unpinFile(path: FilePath): void {
   const index = openFiles.findIndex((file) => file.path === path);
   if (index >= 0) {
     openFiles.splice(index, 1);
   }
   refreshFileTabs();
+}
+
+function closeOtherTabs(path: FilePath): void {
+  const selected = openFiles.find((file) => file.path === path);
+  openFiles.splice(0, openFiles.length, ...(selected ? [selected] : []));
+  refreshFileTabs();
+}
+
+function closeTabsToLeft(path: FilePath): void {
+  const index = openFiles.findIndex((file) => file.path === path);
+  if (index > 0) {
+    openFiles.splice(0, index);
+  }
+  refreshFileTabs();
+}
+
+function closeTabsToRight(path: FilePath): void {
+  const index = openFiles.findIndex((file) => file.path === path);
+  if (index >= 0) {
+    openFiles.splice(index + 1);
+  }
+  refreshFileTabs();
+}
+
+function closeAllTabs(): void {
+  openFiles.splice(0, openFiles.length);
+  refreshFileTabs();
+}
+
+function togglePinnedTab(path: FilePath): void {
+  const file = openFiles.find((candidate) => candidate.path === path);
+  if (file) {
+    if (file.pinned) {
+      const previewIndex = openFiles.findIndex(
+        (candidate) => !candidate.pinned && candidate.path !== path
+      );
+      if (previewIndex >= 0) {
+        openFiles.splice(previewIndex, 1);
+      }
+    }
+    file.pinned = !file.pinned;
+  }
+  refreshFileTabs();
+}
+
+function moveOpenFile(fromIndex: number, toIndex: number): void {
+  if (fromIndex === toIndex || fromIndex < 0) {
+    return;
+  }
+
+  const [file] = openFiles.splice(fromIndex, 1);
+  if (!file) {
+    return;
+  }
+
+  const nextIndex = Math.max(
+    0,
+    Math.min(toIndex > fromIndex ? toIndex - 1 : toIndex, openFiles.length)
+  );
+  openFiles.splice(nextIndex, 0, file);
+  refreshFileTabs();
+}
+
+function getRegionForTab(
+  path: FilePath,
+  diffId: string | undefined
+): HTMLElement | null {
+  return (
+    (diffId ? document.getElementById(diffId) : null) ??
+    getDiffRegions().find(
+      (candidate) => getFilePathFromDiffRegion(candidate) === path
+    ) ??
+    null
+  );
 }
 
 function scrollToRegion(region: HTMLElement): void {
