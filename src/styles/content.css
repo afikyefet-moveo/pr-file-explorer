@@ -198,14 +198,33 @@
 }
 
 .pr-file-explorer-tab[data-dragging="true"] {
-  box-shadow: var(--shadow-resting-medium, 0 3px 8px rgba(31, 35, 40, 0.12));
   cursor: grabbing;
-  opacity: 0.72;
-  transform: translateY(-1px);
+  opacity: 0.35;
 }
 
 .pr-file-explorer-tabs[data-reordering="true"] .pr-file-explorer-tab {
   cursor: grabbing;
+}
+
+.pr-file-explorer-tab[data-drop-position="before"] {
+  box-shadow: inset 2px 0 0 0 var(--fgColor-accent, var(--color-accent-fg));
+}
+
+.pr-file-explorer-tab[data-drop-position="after"] {
+  box-shadow: inset -2px 0 0 0 var(--fgColor-accent, var(--color-accent-fg));
+}
+
+.pr-file-explorer-tab-ghost {
+  background: var(--bgColor-default, var(--color-canvas-default));
+  border: 1px solid var(--borderColor-muted, var(--color-border-muted));
+  border-radius: 6px;
+  box-shadow: var(--shadow-floating-medium, 0 8px 20px rgba(31, 35, 40, 0.18));
+  left: 0;
+  opacity: 0.92;
+  pointer-events: none;
+  position: fixed;
+  top: 0;
+  z-index: 9999;
 }
 
 .pr-file-explorer-tab:hover {

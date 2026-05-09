@@ -44,6 +44,11 @@ interface TabDragState {
   tab: HTMLElement;
   active: boolean;
   frameId: number | null;
+  ghost: HTMLElement | null;
+  ghostOffsetX: number;
+  ghostOffsetY: number;
+  ghostWidth: number;
+  ghostHeight: number;
 }
 
 const openFiles: OpenFile[] = [];
@@ -579,6 +584,11 @@ function onTabsBarPointerDown(event: PointerEvent): void {
     tab,
     active: false,
     frameId: null,
+    ghost: null,
+    ghostOffsetX: 0,
+    ghostOffsetY: 0,
+    ghostWidth: 0,
+    ghostHeight: 0,
   };
 
   try {
@@ -648,6 +658,38 @@ function activateTabDrag(state: TabDragState): void {
   suppressNextTabClick = true;
   state.bar.dataset["reordering"] = "true";
   state.tab.dataset["dragging"] = "true";
+
+  const rect = state.tab.getBoundingClientRect();
+  state.ghostOffsetX = state.startX - rect.left;
+  state.ghostOffsetY = state.startY - rect.top;
+  state.ghostWidth = rect.width;
+  state.ghostHeight = rect.height;
+  state.ghost = createDragGhost(state.tab);
+  document.body.appendChild(state.ghost);
+  positionDragGhost(state);
+  updateDropIndicator(state.bar, state.latestX, state.path);
+}
+
+function createDragGhost(tab: HTMLElement): HTMLElement {
+  const ghost = tab.cloneNode(true) as HTMLElement;
+  ghost.classList.add("pr-file-explorer-tab-ghost");
+  ghost.removeAttribute("id");
+  delete ghost.dataset["dragging"];
+  delete ghost.dataset["dropPosition"];
+  ghost.setAttribute("aria-hidden", "true");
+  ghost.tabIndex = -1;
+  return ghost;
+}
+
+function positionDragGhost(state: TabDragState): void {
+  if (!state.ghost) {
+    return;
+  }
+  const left = state.latestX - state.ghostOffsetX;
+  const top = state.latestY - state.ghostOffsetY;
+  state.ghost.style.width = `${state.ghostWidth}px`;
+  state.ghost.style.height = `${state.ghostHeight}px`;
+  state.ghost.style.transform = `translate(${left}px, ${top}px)`;
 }
 
 function scheduleTabDragFrame(state: TabDragState): void {
@@ -662,11 +704,46 @@ function scheduleTabDragFrame(state: TabDragState): void {
     }
 
     const scrolled = scrollTabsBarForPointer(state.bar, state.latestX);
-    reorderTabForPointer(state);
+    positionDragGhost(state);
+    updateDropIndicator(state.bar, state.latestX, state.path);
     if (scrolled) {
       scheduleTabDragFrame(state);
     }
   });
+}
+
+function updateDropIndicator(
+  bar: HTMLElement,
+  clientX: number,
+  draggedPath: FilePath
+): void {
+  clearDropIndicator(bar);
+
+  const tabs = Array.from(
+    bar.querySelectorAll<HTMLElement>(`.${FILE_TAB_CLASS}`)
+  ).filter((tab) => tab.dataset["filePath"] !== draggedPath);
+  if (tabs.length === 0) {
+    return;
+  }
+
+  for (const tab of tabs) {
+    const rect = tab.getBoundingClientRect();
+    if (clientX < rect.left + rect.width / 2) {
+      tab.dataset["dropPosition"] = "before";
+      return;
+    }
+  }
+
+  const lastTab = tabs[tabs.length - 1];
+  if (lastTab) {
+    lastTab.dataset["dropPosition"] = "after";
+  }
+}
+
+function clearDropIndicator(bar: HTMLElement): void {
+  bar
+    .querySelectorAll<HTMLElement>(`.${FILE_TAB_CLASS}[data-drop-position]`)
+    .forEach((tab) => delete tab.dataset["dropPosition"]);
 }
 
 function scrollTabsBarForPointer(bar: HTMLElement, clientX: number): boolean {
@@ -680,17 +757,6 @@ function scrollTabsBarForPointer(bar: HTMLElement, clientX: number): boolean {
   }
 
   return bar.scrollLeft !== before;
-}
-
-function reorderTabForPointer(state: TabDragState): void {
-  const nextIndex = getPointerInsertionIndex(
-    state.bar,
-    state.latestX,
-    state.path
-  );
-  if (moveOpenFileToIndex(state.path, nextIndex)) {
-    syncTabDomOrder(state.bar);
-  }
 }
 
 function getPointerInsertionIndex(
@@ -738,23 +804,6 @@ function moveOpenFileToIndex(path: FilePath, insertionIndex: number): boolean {
   return true;
 }
 
-function syncTabDomOrder(bar: HTMLElement): void {
-  const tabsByPath = new Map<FilePath, HTMLElement>();
-  bar.querySelectorAll<HTMLElement>(`.${FILE_TAB_CLASS}`).forEach((tab) => {
-    const path = tab.dataset["filePath"] as FilePath | undefined;
-    if (path) {
-      tabsByPath.set(path, tab);
-    }
-  });
-
-  for (const file of openFiles) {
-    const tab = tabsByPath.get(file.path);
-    if (tab) {
-      bar.appendChild(tab);
-    }
-  }
-}
-
 function finishTabDrag(
   state: TabDragState,
   event: PointerEvent,
@@ -774,13 +823,29 @@ function finishTabDrag(
     // Pointer capture may already be released when the browser cancels input.
   }
 
+  let moved = false;
+  if (state.active) {
+    const targetIndex = getPointerInsertionIndex(
+      state.bar,
+      state.latestX,
+      state.path
+    );
+    moved = moveOpenFileToIndex(state.path, targetIndex);
+  }
+
+  state.ghost?.remove();
+  state.ghost = null;
+  clearDropIndicator(state.bar);
   delete state.bar.dataset["reordering"];
   delete state.tab.dataset["dragging"];
   tabDragState = null;
 
   if (state.active && shouldPersist) {
-    persistOpenFiles();
-    updateActiveTabState();
+    if (moved) {
+      refreshFileTabs();
+    } else {
+      updateActiveTabState();
+    }
   }
 }
 
@@ -800,6 +865,9 @@ function cancelTabDrag(): void {
     // Pointer capture may already be released during teardown.
   }
 
+  state.ghost?.remove();
+  state.ghost = null;
+  clearDropIndicator(state.bar);
   delete state.bar.dataset["reordering"];
   delete state.tab.dataset["dragging"];
   tabDragState = null;
