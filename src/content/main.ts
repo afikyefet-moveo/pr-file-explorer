@@ -21,6 +21,11 @@ import {
   refreshReviewFlow,
   uninstallReviewFlowRail,
 } from "../features/reviewFlow/reviewFlow";
+import {
+  installPageTopShortcut,
+  uninstallPageTopShortcut,
+  updatePageTopShortcut,
+} from "./pageTopShortcut";
 
 let cachedSettings: Settings | null = null;
 let goToTop: GoToTopController | null = null;
@@ -43,6 +48,7 @@ function applyAll(): void {
   safely("apply back to top", applyGoToTop);
   safely("apply review flow", applyReviewFlow);
   safely("apply file tabs", applyFileTabs);
+  safely("apply page top shortcut", applyPageTopShortcut);
 }
 
 function applyEnhancements(): void {
@@ -111,6 +117,20 @@ function applyFileTabs(): void {
 
   installFileTabs();
   refreshFileTabs();
+}
+
+function applyPageTopShortcut(): void {
+  if (!cachedSettings) {
+    return;
+  }
+
+  if (!cachedSettings.pageTopShortcutEnabled) {
+    uninstallPageTopShortcut();
+    return;
+  }
+
+  installPageTopShortcut(cachedSettings.pageTopShortcut);
+  updatePageTopShortcut(cachedSettings.pageTopShortcut);
 }
 
 if (document.readyState === "loading") {

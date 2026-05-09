@@ -11,6 +11,8 @@ export interface Settings {
   editorEnabled: boolean;
   editor: EditorChoice;
   repoRoot: string;
+  pageTopShortcutEnabled: boolean;
+  pageTopShortcut: string;
 }
 
 const STORAGE_KEYS = {
@@ -23,6 +25,8 @@ const STORAGE_KEYS = {
   editorEnabled: "prFileExplorer.editorEnabled",
   editor: "prFileExplorer.editor",
   repoRoot: "prFileExplorer.repoRoot",
+  pageTopShortcutEnabled: "prFileExplorer.pageTopShortcutEnabled",
+  pageTopShortcut: "prFileExplorer.pageTopShortcut",
 } as const;
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -35,6 +39,8 @@ export const DEFAULT_SETTINGS: Settings = {
   editorEnabled: true,
   editor: "cursor",
   repoRoot: "",
+  pageTopShortcutEnabled: true,
+  pageTopShortcut: "Shift+T",
 };
 
 export async function getSettings(): Promise<Settings> {
@@ -71,6 +77,14 @@ export async function getSettings(): Promise<Settings> {
     ),
     editor: normalizeEditor(stored[STORAGE_KEYS.editor]),
     repoRoot: normalizeRepoRoot(stored[STORAGE_KEYS.repoRoot]),
+    pageTopShortcutEnabled: coerceBool(
+      stored[STORAGE_KEYS.pageTopShortcutEnabled],
+      DEFAULT_SETTINGS.pageTopShortcutEnabled
+    ),
+    pageTopShortcut: normalizeShortcut(
+      stored[STORAGE_KEYS.pageTopShortcut],
+      DEFAULT_SETTINGS.pageTopShortcut
+    ),
   };
 }
 
@@ -86,6 +100,8 @@ export async function setSettings(patch: Partial<Settings>): Promise<Settings> {
     [STORAGE_KEYS.editorEnabled]: next.editorEnabled,
     [STORAGE_KEYS.editor]: next.editor,
     [STORAGE_KEYS.repoRoot]: next.repoRoot,
+    [STORAGE_KEYS.pageTopShortcutEnabled]: next.pageTopShortcutEnabled,
+    [STORAGE_KEYS.pageTopShortcut]: next.pageTopShortcut,
   });
   return next;
 }
@@ -142,4 +158,12 @@ function normalizeScrollTarget(
   return value === "pageTop" || value === "filesTop"
     ? (value as ScrollTarget)
     : fallback;
+}
+
+function normalizeShortcut(value: unknown, fallback: string): string {
+  if (typeof value !== "string") {
+    return fallback;
+  }
+  const trimmed = value.trim();
+  return trimmed.length === 0 ? fallback : trimmed;
 }
