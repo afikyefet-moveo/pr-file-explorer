@@ -162,6 +162,12 @@
   display: flex;
 }
 
+.pr-file-explorer-tabs[data-reordering="true"] {
+  cursor: grabbing;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
 .pr-file-explorer-tab {
   align-items: center;
   background: transparent;
@@ -169,7 +175,7 @@
   border-right: 1px solid var(--borderColor-muted, var(--color-border-muted));
   border-radius: 0;
   color: var(--fgColor-muted, var(--color-fg-muted));
-  cursor: pointer;
+  cursor: grab;
   display: inline-flex;
   flex: 0 0 auto;
   font: inherit;
@@ -179,6 +185,9 @@
   min-width: 0;
   max-width: 220px;
   padding: 0 8px;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
   white-space: nowrap;
 }
 
@@ -189,15 +198,14 @@
 }
 
 .pr-file-explorer-tab[data-dragging="true"] {
-  opacity: 0.45;
+  box-shadow: var(--shadow-resting-medium, 0 3px 8px rgba(31, 35, 40, 0.12));
+  cursor: grabbing;
+  opacity: 0.72;
+  transform: translateY(-1px);
 }
 
-.pr-file-explorer-tab[data-drop-position="before"] {
-  box-shadow: inset 2px 0 0 0 var(--fgColor-accent, var(--color-accent-fg));
-}
-
-.pr-file-explorer-tab[data-drop-position="after"] {
-  box-shadow: inset -2px 0 0 0 var(--fgColor-accent, var(--color-accent-fg));
+.pr-file-explorer-tabs[data-reordering="true"] .pr-file-explorer-tab {
+  cursor: grabbing;
 }
 
 .pr-file-explorer-tab:hover {

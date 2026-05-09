@@ -29,7 +29,22 @@ const FILE_HEADER_GAP_PX = 4;
 const STORAGE_KEY_PREFIX = "prFileExplorer.fileTabs.";
 const TAB_CONTEXT_MENU_CLASS = "pr-file-explorer-tab-menu";
 const TAB_CONTEXT_MENU_ITEM_CLASS = "pr-file-explorer-tab-menu-item";
-const TAB_DRAG_DATA_TYPE = "application/x-pr-file-explorer-tab";
+const TAB_DRAG_THRESHOLD_PX = 5;
+const TAB_DRAG_EDGE_SIZE_PX = 44;
+const TAB_DRAG_SCROLL_STEP_PX = 18;
+
+interface TabDragState {
+  path: FilePath;
+  pointerId: number;
+  startX: number;
+  startY: number;
+  latestX: number;
+  latestY: number;
+  bar: HTMLElement;
+  tab: HTMLElement;
+  active: boolean;
+  frameId: number | null;
+}
 
 const openFiles: OpenFile[] = [];
 let installed = false;
@@ -38,6 +53,8 @@ let resizeListener: (() => void) | null = null;
 let documentClickListener: ((event: MouseEvent) => void) | null = null;
 let documentKeydownListener: ((event: KeyboardEvent) => void) | null = null;
 let loadedStorageKey: string | null = null;
+let tabDragState: TabDragState | null = null;
+let suppressNextTabClick = false;
 
 export function installFileTabs(): void {
   if (installed) {
@@ -197,6 +214,7 @@ export function refreshFileTabs(): void {
 }
 
 export function uninstallFileTabs(): void {
+  cancelTabDrag();
   document.querySelector<HTMLElement>(`.${FILE_TABS_BAR_CLASS}`)?.remove();
   hideTabContextMenu();
   getTabContextMenu()?.remove();
@@ -291,12 +309,10 @@ function createTabsBar(): HTMLElement {
   bar.addEventListener("click", onTabsBarClick);
   bar.addEventListener("dblclick", onTabsBarDoubleClick);
   bar.addEventListener("contextmenu", onTabsBarContextMenu);
-  bar.addEventListener("dragstart", onTabsBarDragStart);
-  bar.addEventListener("dragenter", onTabsBarDragEnter);
-  bar.addEventListener("dragover", onTabsBarDragOver);
-  bar.addEventListener("dragleave", onTabsBarDragLeave);
-  bar.addEventListener("drop", onTabsBarDrop);
-  bar.addEventListener("dragend", onTabsBarDragEnd);
+  bar.addEventListener("pointerdown", onTabsBarPointerDown);
+  bar.addEventListener("pointermove", onTabsBarPointerMove);
+  bar.addEventListener("pointerup", onTabsBarPointerUp);
+  bar.addEventListener("pointercancel", onTabsBarPointerCancel);
   return bar;
 }
 
@@ -439,7 +455,6 @@ function createTab(file: OpenFile): HTMLElement {
   const tab = document.createElement("button");
   tab.type = "button";
   tab.className = FILE_TAB_CLASS;
-  tab.draggable = true;
   tab.dataset["filePath"] = file.path;
   tab.dataset["diffId"] = file.diffId;
   tab.dataset["pinned"] = file.pinned ? "true" : "false";
@@ -465,6 +480,13 @@ function createTab(file: OpenFile): HTMLElement {
 }
 
 function onTabsBarClick(event: Event): void {
+  if (suppressNextTabClick) {
+    suppressNextTabClick = false;
+    event.preventDefault();
+    event.stopPropagation();
+    return;
+  }
+
   const close = (event.target as HTMLElement | null)?.closest<HTMLElement>(
     ".pr-file-explorer-tab-close"
   );
@@ -525,75 +547,85 @@ function onTabsBarContextMenu(event: MouseEvent): void {
   showTabContextMenu(path, event.clientX, event.clientY);
 }
 
-function onTabsBarDragStart(event: DragEvent): void {
+function onTabsBarPointerDown(event: PointerEvent): void {
+  if (event.button !== 0 || tabDragState) {
+    return;
+  }
+
   const tab = getTabFromEvent(event);
   const path = tab?.dataset["filePath"] as FilePath | undefined;
-  if (!tab || !path || openFiles.findIndex((file) => file.path === path) < 0) {
-    event.preventDefault();
+  const bar = event.currentTarget as HTMLElement | null;
+  const target = event.target as HTMLElement | null;
+  const close = target?.closest<HTMLElement>(".pr-file-explorer-tab-close");
+  if (
+    !bar ||
+    !tab ||
+    !path ||
+    close ||
+    openFiles.findIndex((file) => file.path === path) < 0
+  ) {
     return;
   }
 
   hideTabContextMenu();
-  tab.dataset["dragging"] = "true";
-  event.dataTransfer?.setData(TAB_DRAG_DATA_TYPE, path);
-  event.dataTransfer?.setData("text/plain", path);
-  if (event.dataTransfer) {
-    event.dataTransfer.effectAllowed = "move";
+  tabDragState = {
+    path,
+    pointerId: event.pointerId,
+    startX: event.clientX,
+    startY: event.clientY,
+    latestX: event.clientX,
+    latestY: event.clientY,
+    bar,
+    tab,
+    active: false,
+    frameId: null,
+  };
+
+  try {
+    tab.setPointerCapture(event.pointerId);
+  } catch {
+    // Pointer capture is best-effort; mouse dragging still works without it.
   }
 }
 
-function onTabsBarDragEnter(event: DragEvent): void {
-  const bar = event.currentTarget as HTMLElement | null;
-  if (!bar || !getDraggedTabPath(bar, event)) {
-    return;
-  }
-  event.preventDefault();
-}
-
-function onTabsBarDragLeave(event: DragEvent): void {
-  const bar = event.currentTarget as HTMLElement | null;
-  if (!bar) {
-    return;
-  }
-  const related = event.relatedTarget as Node | null;
-  if (!related || !bar.contains(related)) {
-    clearDropIndicator(bar);
-  }
-}
-
-function onTabsBarDragOver(event: DragEvent): void {
-  const bar = event.currentTarget as HTMLElement | null;
-  if (!bar || !getDraggedTabPath(bar, event)) {
+function onTabsBarPointerMove(event: PointerEvent): void {
+  const state = tabDragState;
+  if (!state || event.pointerId !== state.pointerId) {
     return;
   }
 
-  event.preventDefault();
-  if (event.dataTransfer) {
-    event.dataTransfer.dropEffect = "move";
+  state.latestX = event.clientX;
+  state.latestY = event.clientY;
+
+  if (!state.active && !hasPassedDragThreshold(state)) {
+    return;
   }
 
-  scrollTabsBarForDrag(bar, event);
-  updateDropIndicator(bar, event);
-}
-
-function onTabsBarDrop(event: DragEvent): void {
-  const bar = event.currentTarget as HTMLElement | null;
-  const path = bar ? getDraggedTabPath(bar, event) : null;
-  if (!bar || !path) {
-    return;
+  if (!state.active) {
+    activateTabDrag(state);
   }
 
   event.preventDefault();
-  clearDragState(bar);
-  const fromIndex = openFiles.findIndex((file) => file.path === path);
-  moveOpenFile(fromIndex, getDropIndex(bar, event));
+  scheduleTabDragFrame(state);
 }
 
-function onTabsBarDragEnd(event: DragEvent): void {
-  const bar = event.currentTarget as HTMLElement | null;
-  if (bar) {
-    clearDragState(bar);
+function onTabsBarPointerUp(event: PointerEvent): void {
+  const state = tabDragState;
+  if (!state || event.pointerId !== state.pointerId) {
+    return;
   }
+
+  finishTabDrag(state, event, true);
+}
+
+function onTabsBarPointerCancel(event: PointerEvent): void {
+  const state = tabDragState;
+  if (!state || event.pointerId !== state.pointerId) {
+    return;
+  }
+
+  finishTabDrag(state, event, true);
+  suppressNextTabClick = false;
 }
 
 function getTabFromEvent(event: Event): HTMLElement | null {
@@ -604,86 +636,173 @@ function getTabFromEvent(event: Event): HTMLElement | null {
   );
 }
 
-function getDraggedTabPath(
-  bar: HTMLElement,
-  event: DragEvent
-): FilePath | null {
-  const transferred =
-    event.dataTransfer?.getData(TAB_DRAG_DATA_TYPE) ??
-    event.dataTransfer?.getData("text/plain") ??
-    "";
-  const path =
-    transferred ||
-    bar.querySelector<HTMLElement>(`.${FILE_TAB_CLASS}[data-dragging="true"]`)
-      ?.dataset["filePath"];
-
-  return path ? (path as FilePath) : null;
+function hasPassedDragThreshold(state: TabDragState): boolean {
+  return (
+    Math.hypot(state.latestX - state.startX, state.latestY - state.startY) >=
+    TAB_DRAG_THRESHOLD_PX
+  );
 }
 
-function scrollTabsBarForDrag(bar: HTMLElement, event: DragEvent): void {
-  const rect = bar.getBoundingClientRect();
-  const edgeSize = 40;
-  if (event.clientX - rect.left < edgeSize) {
-    bar.scrollLeft -= 18;
-  } else if (rect.right - event.clientX < edgeSize) {
-    bar.scrollLeft += 18;
-  }
+function activateTabDrag(state: TabDragState): void {
+  state.active = true;
+  suppressNextTabClick = true;
+  state.bar.dataset["reordering"] = "true";
+  state.tab.dataset["dragging"] = "true";
 }
 
-function getDroppableTabs(bar: HTMLElement): HTMLElement[] {
-  return Array.from(
-    bar.querySelectorAll<HTMLElement>(`.${FILE_TAB_CLASS}`)
-  ).filter((tab) => tab.dataset["dragging"] !== "true");
-}
-
-function updateDropIndicator(bar: HTMLElement, event: DragEvent): void {
-  clearDropIndicator(bar);
-
-  const tabs = getDroppableTabs(bar);
-  if (tabs.length === 0) {
+function scheduleTabDragFrame(state: TabDragState): void {
+  if (state.frameId !== null) {
     return;
   }
 
-  for (const tab of tabs) {
-    const rect = tab.getBoundingClientRect();
-    if (event.clientX < rect.left + rect.width / 2) {
-      tab.dataset["dropPosition"] = "before";
+  state.frameId = window.requestAnimationFrame(() => {
+    state.frameId = null;
+    if (tabDragState !== state || !state.active) {
       return;
     }
+
+    const scrolled = scrollTabsBarForPointer(state.bar, state.latestX);
+    reorderTabForPointer(state);
+    if (scrolled) {
+      scheduleTabDragFrame(state);
+    }
+  });
+}
+
+function scrollTabsBarForPointer(bar: HTMLElement, clientX: number): boolean {
+  const rect = bar.getBoundingClientRect();
+  const before = bar.scrollLeft;
+
+  if (clientX - rect.left < TAB_DRAG_EDGE_SIZE_PX) {
+    bar.scrollLeft -= TAB_DRAG_SCROLL_STEP_PX;
+  } else if (rect.right - clientX < TAB_DRAG_EDGE_SIZE_PX) {
+    bar.scrollLeft += TAB_DRAG_SCROLL_STEP_PX;
   }
 
-  const lastTab = tabs[tabs.length - 1];
-  if (lastTab) {
-    lastTab.dataset["dropPosition"] = "after";
+  return bar.scrollLeft !== before;
+}
+
+function reorderTabForPointer(state: TabDragState): void {
+  const nextIndex = getPointerInsertionIndex(
+    state.bar,
+    state.latestX,
+    state.path
+  );
+  if (moveOpenFileToIndex(state.path, nextIndex)) {
+    syncTabDomOrder(state.bar);
   }
 }
 
-function getDropIndex(bar: HTMLElement, event: DragEvent): number {
-  const tabs = getDroppableTabs(bar);
-  for (const tab of tabs) {
+function getPointerInsertionIndex(
+  bar: HTMLElement,
+  clientX: number,
+  draggedPath: FilePath
+): number {
+  const tabs = Array.from(
+    bar.querySelectorAll<HTMLElement>(`.${FILE_TAB_CLASS}`)
+  ).filter((tab) => tab.dataset["filePath"] !== draggedPath);
+
+  for (let index = 0; index < tabs.length; index += 1) {
+    const tab = tabs[index];
+    if (!tab) {
+      continue;
+    }
+
     const rect = tab.getBoundingClientRect();
-    if (event.clientX < rect.left + rect.width / 2) {
-      const path = tab.dataset["filePath"] as FilePath | undefined;
-      const index = openFiles.findIndex((file) => file.path === path);
-      return index < 0 ? openFiles.length : index;
+    if (clientX < rect.left + rect.width / 2) {
+      return index;
     }
   }
-  return openFiles.length;
+
+  return tabs.length;
 }
 
-function clearDragState(bar: HTMLElement): void {
+function moveOpenFileToIndex(path: FilePath, insertionIndex: number): boolean {
+  const currentIndex = openFiles.findIndex((file) => file.path === path);
+  if (currentIndex < 0) {
+    return false;
+  }
+
+  const [file] = openFiles.splice(currentIndex, 1);
+  if (!file) {
+    return false;
+  }
+
+  const nextIndex = Math.max(0, Math.min(insertionIndex, openFiles.length));
+  if (nextIndex === currentIndex) {
+    openFiles.splice(currentIndex, 0, file);
+    return false;
+  }
+
+  openFiles.splice(nextIndex, 0, file);
+  return true;
+}
+
+function syncTabDomOrder(bar: HTMLElement): void {
+  const tabsByPath = new Map<FilePath, HTMLElement>();
   bar.querySelectorAll<HTMLElement>(`.${FILE_TAB_CLASS}`).forEach((tab) => {
-    delete tab.dataset["dragging"];
-    delete tab.dataset["dropPosition"];
+    const path = tab.dataset["filePath"] as FilePath | undefined;
+    if (path) {
+      tabsByPath.set(path, tab);
+    }
   });
+
+  for (const file of openFiles) {
+    const tab = tabsByPath.get(file.path);
+    if (tab) {
+      bar.appendChild(tab);
+    }
+  }
 }
 
-function clearDropIndicator(bar: HTMLElement): void {
-  bar.querySelectorAll<HTMLElement>(
-    `.${FILE_TAB_CLASS}[data-drop-position]`
-  ).forEach((tab) => {
-    delete tab.dataset["dropPosition"];
-  });
+function finishTabDrag(
+  state: TabDragState,
+  event: PointerEvent,
+  shouldPersist: boolean
+): void {
+  if (state.active) {
+    event.preventDefault();
+  }
+
+  if (state.frameId !== null) {
+    window.cancelAnimationFrame(state.frameId);
+  }
+
+  try {
+    state.tab.releasePointerCapture(state.pointerId);
+  } catch {
+    // Pointer capture may already be released when the browser cancels input.
+  }
+
+  delete state.bar.dataset["reordering"];
+  delete state.tab.dataset["dragging"];
+  tabDragState = null;
+
+  if (state.active && shouldPersist) {
+    persistOpenFiles();
+    updateActiveTabState();
+  }
+}
+
+function cancelTabDrag(): void {
+  const state = tabDragState;
+  if (!state) {
+    return;
+  }
+
+  if (state.frameId !== null) {
+    window.cancelAnimationFrame(state.frameId);
+  }
+
+  try {
+    state.tab.releasePointerCapture(state.pointerId);
+  } catch {
+    // Pointer capture may already be released during teardown.
+  }
+
+  delete state.bar.dataset["reordering"];
+  delete state.tab.dataset["dragging"];
+  tabDragState = null;
 }
 
 type TabContextCommand =
@@ -882,24 +1001,6 @@ function togglePinnedTab(path: FilePath): void {
     }
     file.pinned = !file.pinned;
   }
-  refreshFileTabs();
-}
-
-function moveOpenFile(fromIndex: number, toIndex: number): void {
-  if (fromIndex === toIndex || fromIndex < 0) {
-    return;
-  }
-
-  const [file] = openFiles.splice(fromIndex, 1);
-  if (!file) {
-    return;
-  }
-
-  const nextIndex = Math.max(
-    0,
-    Math.min(toIndex > fromIndex ? toIndex - 1 : toIndex, openFiles.length)
-  );
-  openFiles.splice(nextIndex, 0, file);
   refreshFileTabs();
 }
 
