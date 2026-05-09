@@ -4,8 +4,20 @@
   "version": "0.3.0",
   "description": "Adds file navigation and review quality-of-life controls to GitHub PR files pages.",
   "permissions": ["storage"],
+  "icons": {
+    "16": "assets/image.png",
+    "32": "assets/image.png",
+    "48": "assets/image.png",
+    "128": "assets/image.png"
+  },
   "action": {
     "default_title": "PR File Explorer",
+    "default_icon": {
+      "16": "assets/image.png",
+      "32": "assets/image.png",
+      "48": "assets/image.png",
+      "128": "assets/image.png"
+    },
     "default_popup": "src/popup/index.html"
   },
   "content_scripts": [
