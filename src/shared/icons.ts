@@ -4,7 +4,9 @@ export type IconName =
   | "goToTop"
   | "comment"
   | "unviewed"
-  | "copyContext";
+  | "copyContext"
+  | "pin"
+  | "close";
 
 const LOCATE_ICON_SVG = [
   '<svg data-component="Octicon" aria-hidden="true" focusable="false"',
@@ -66,6 +68,24 @@ const COPY_CONTEXT_ICON_SVG = [
   "</svg>",
 ].join("");
 
+const PIN_ICON_SVG = [
+  '<svg data-component="Octicon" aria-hidden="true" focusable="false"',
+  ' class="octicon octicon-pin" viewBox="0 0 16 16" width="16" height="16"',
+  ' fill="currentColor" display="inline-block" overflow="visible"',
+  ' style="vertical-align: text-bottom;">',
+  '<path d="M10.561 1.5a.016.016 0 0 0-.01.004L7.286 4.77a.749.749 0 0 1-.53.22H4.19a.25.25 0 0 0-.177.427l2.283 2.283-4.073 4.073a.75.75 0 1 0 1.06 1.06l4.073-4.073 2.283 2.283a.25.25 0 0 0 .427-.177V8.3a.75.75 0 0 1 .22-.53l3.265-3.265a.016.016 0 0 0 .004-.01.25.25 0 0 0-.073-.177L10.738 1.573a.25.25 0 0 0-.177-.073Zm-1.071-1.06a1.5 1.5 0 0 1 2.309.073l2.744 2.744a1.5 1.5 0 0 1 .073 2.309L11.57 8.612v2.254A1.75 1.75 0 0 1 8.582 12.1L3.418 6.936A1.75 1.75 0 0 1 4.19 3.49h2.254Z"></path>',
+  "</svg>",
+].join("");
+
+const CLOSE_ICON_SVG = [
+  '<svg data-component="Octicon" aria-hidden="true" focusable="false"',
+  ' class="octicon octicon-x" viewBox="0 0 16 16" width="16" height="16"',
+  ' fill="currentColor" display="inline-block" overflow="visible"',
+  ' style="vertical-align: text-bottom;">',
+  '<path d="M3.72 3.72a.75.75 0 0 1 1.06 0L8 6.94l3.22-3.22a.749.749 0 0 1 1.06 1.06L9.06 8l3.22 3.22a.749.749 0 0 1-1.06 1.06L8 9.06l-3.22 3.22a.749.749 0 0 1-1.06-1.06L6.94 8 3.72 4.78a.75.75 0 0 1 0-1.06Z"></path>',
+  "</svg>",
+].join("");
+
 export function getIconSvg(name: IconName): string {
   switch (name) {
     case "locate":
@@ -80,6 +100,10 @@ export function getIconSvg(name: IconName): string {
       return UNVIEWED_ICON_SVG;
     case "copyContext":
       return COPY_CONTEXT_ICON_SVG;
+    case "pin":
+      return PIN_ICON_SVG;
+    case "close":
+      return CLOSE_ICON_SVG;
   }
 }
 
@@ -89,3 +113,5 @@ export const getGoToTopIconSvg = (): string => getIconSvg("goToTop");
 export const getCommentIconSvg = (): string => getIconSvg("comment");
 export const getUnviewedIconSvg = (): string => getIconSvg("unviewed");
 export const getCopyContextIconSvg = (): string => getIconSvg("copyContext");
+export const getPinIconSvg = (): string => getIconSvg("pin");
+export const getCloseIconSvg = (): string => getIconSvg("close");

@@ -1,5 +1,12 @@
 import { useEffect, useState, type ReactElement } from "react";
-import { ArrowLeftRight, Copy, Eye, Loader2, MessageSquareText } from "lucide-react";
+import {
+  ArrowLeftRight,
+  Copy,
+  Eye,
+  Loader2,
+  MessageSquareText,
+  Pin,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -74,6 +81,24 @@ export function Popup(): ReactElement {
           Quick toggles for the GitHub PR review helpers.
         </p>
       </header>
+
+      <Separator />
+
+      <Row
+        id="file-tabs-enabled"
+        title="File tabs"
+        description="Show IDE-like preview and permanent tabs above the diff view."
+        checked={settings.fileTabsEnabled}
+        onCheckedChange={(value) => void update({ fileTabsEnabled: value })}
+      />
+
+      <div className="space-y-2 rounded-md border bg-muted/35 p-3">
+        <FeatureHint
+          icon={<Pin className="h-3.5 w-3.5" />}
+          title="Preview and keep"
+          description="Single-click a file header for an italic preview tab; double-click the file or tab to keep it."
+        />
+      </div>
 
       <Separator />
 

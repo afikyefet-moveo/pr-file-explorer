@@ -1,15 +1,27 @@
 export function getStickyHeaderOffset(): number {
-  const stickyHeader =
-    document.querySelector<HTMLElement>("[class*='StickyHeader']") ??
-    document.querySelector<HTMLElement>("[class*='pagehead']") ??
-    document.querySelector<HTMLElement>(".js-sticky");
+  const stickyHeaders = [
+    ...document.querySelectorAll<HTMLElement>(
+      [
+        "[class*='use-sticky-header-module__stickyHeader']",
+        "[class*='PullRequestFilesToolbar-module__toolbar']",
+        "[class*='StickyHeader']",
+        "[class*='pagehead']",
+        ".js-sticky",
+      ].join(",")
+    ),
+  ];
 
-  if (!stickyHeader) {
+  if (!stickyHeaders.length) {
     return 0;
   }
 
-  const rect = stickyHeader.getBoundingClientRect();
-  return rect.height > 0 && rect.top <= 1 ? rect.height : 0;
+  return stickyHeaders.reduce((offset, stickyHeader) => {
+    const rect = stickyHeader.getBoundingClientRect();
+    if (rect.height <= 0 || rect.top > 1) {
+      return offset;
+    }
+    return Math.max(offset, Math.max(0, rect.bottom));
+  }, 0);
 }
 
 export function getFilesTopScrollY(): number {

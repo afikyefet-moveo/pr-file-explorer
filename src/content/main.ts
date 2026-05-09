@@ -6,6 +6,11 @@ import {
 import { debugLog, safely } from "../shared/diagnostics";
 import { enhanceFileHeaders } from "./enhanceFileHeaders";
 import {
+  installFileTabs,
+  refreshFileTabs,
+  uninstallFileTabs,
+} from "../features/fileTabs/fileTabs";
+import {
   installGoToTopButton,
   uninstallGoToTopButton,
   type GoToTopController,
@@ -37,6 +42,7 @@ function applyAll(): void {
   safely("apply enhancements", applyEnhancements);
   safely("apply back to top", applyGoToTop);
   safely("apply review flow", applyReviewFlow);
+  safely("apply file tabs", applyFileTabs);
 }
 
 function applyEnhancements(): void {
@@ -49,6 +55,9 @@ function applyEnhancements(): void {
   });
   if (cachedSettings.reviewFlowEnabled) {
     refreshReviewFlow();
+  }
+  if (cachedSettings.fileTabsEnabled) {
+    refreshFileTabs();
   }
 }
 
@@ -88,6 +97,20 @@ function applyReviewFlow(): void {
 
   installReviewFlowRail();
   refreshReviewFlow();
+}
+
+function applyFileTabs(): void {
+  if (!cachedSettings) {
+    return;
+  }
+
+  if (!cachedSettings.fileTabsEnabled) {
+    uninstallFileTabs();
+    return;
+  }
+
+  installFileTabs();
+  refreshFileTabs();
 }
 
 if (document.readyState === "loading") {

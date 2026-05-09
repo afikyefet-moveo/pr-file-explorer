@@ -7,6 +7,7 @@ export interface Settings {
   backToTopClickAction: ScrollTarget;
   backToTopShiftClickAction: ScrollTarget;
   reviewFlowEnabled: boolean;
+  fileTabsEnabled: boolean;
   editorEnabled: boolean;
   editor: EditorChoice;
   repoRoot: string;
@@ -18,6 +19,7 @@ const STORAGE_KEYS = {
   backToTopClickAction: "prFileExplorer.backToTopClickAction",
   backToTopShiftClickAction: "prFileExplorer.backToTopShiftClickAction",
   reviewFlowEnabled: "prFileExplorer.reviewFlowEnabled",
+  fileTabsEnabled: "prFileExplorer.fileTabsEnabled",
   editorEnabled: "prFileExplorer.editorEnabled",
   editor: "prFileExplorer.editor",
   repoRoot: "prFileExplorer.repoRoot",
@@ -29,6 +31,7 @@ export const DEFAULT_SETTINGS: Settings = {
   backToTopClickAction: "filesTop",
   backToTopShiftClickAction: "pageTop",
   reviewFlowEnabled: true,
+  fileTabsEnabled: true,
   editorEnabled: true,
   editor: "cursor",
   repoRoot: "",
@@ -58,6 +61,10 @@ export async function getSettings(): Promise<Settings> {
       stored[STORAGE_KEYS.reviewFlowEnabled],
       DEFAULT_SETTINGS.reviewFlowEnabled
     ),
+    fileTabsEnabled: coerceBool(
+      stored[STORAGE_KEYS.fileTabsEnabled],
+      DEFAULT_SETTINGS.fileTabsEnabled
+    ),
     editorEnabled: coerceBool(
       stored[STORAGE_KEYS.editorEnabled],
       DEFAULT_SETTINGS.editorEnabled
@@ -75,6 +82,7 @@ export async function setSettings(patch: Partial<Settings>): Promise<Settings> {
     [STORAGE_KEYS.backToTopClickAction]: next.backToTopClickAction,
     [STORAGE_KEYS.backToTopShiftClickAction]: next.backToTopShiftClickAction,
     [STORAGE_KEYS.reviewFlowEnabled]: next.reviewFlowEnabled,
+    [STORAGE_KEYS.fileTabsEnabled]: next.fileTabsEnabled,
     [STORAGE_KEYS.editorEnabled]: next.editorEnabled,
     [STORAGE_KEYS.editor]: next.editor,
     [STORAGE_KEYS.repoRoot]: next.repoRoot,
