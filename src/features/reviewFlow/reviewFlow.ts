@@ -19,22 +19,29 @@ import {
 } from "./reviewRail";
 import type { ReviewAction } from "./types";
 
-let installed = false;
 let railScrollListener: (() => void) | null = null;
 
 export function installReviewFlowRail(): void {
-  if (installed || document.querySelector(`.${REVIEW_RAIL_CLASS}`)) {
-    installed = true;
+  const existing = document.querySelector(`.${REVIEW_RAIL_CLASS}`);
+  if (existing) {
+    ensureRailScrollListener();
     return;
   }
 
   const rail = createReviewRail(onRailAction);
   document.body.appendChild(rail);
 
+  ensureRailScrollListener();
+  debugLog("review flow rail installed");
+}
+
+function ensureRailScrollListener(): void {
+  if (railScrollListener) {
+    return;
+  }
+
   railScrollListener = () => refreshReviewFlow();
   window.addEventListener("scroll", railScrollListener, { passive: true });
-  installed = true;
-  debugLog("review flow rail installed");
 }
 
 export function refreshReviewFlow(): void {
@@ -58,7 +65,6 @@ export function uninstallReviewFlowRail(): void {
   }
 
   clearCommentBadges();
-  installed = false;
   debugLog("review flow rail uninstalled");
 }
 

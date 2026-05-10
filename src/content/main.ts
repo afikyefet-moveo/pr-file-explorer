@@ -4,7 +4,10 @@ import {
   type Settings,
 } from "../shared/settings";
 import { debugLog, safely } from "../shared/diagnostics";
-import { enhanceFileHeaders } from "./enhanceFileHeaders";
+import {
+  enhanceFileHeaders,
+  uninstallFileHeaderEnhancements,
+} from "./enhanceFileHeaders";
 import {
   installFileTabs,
   refreshFileTabs,
@@ -26,24 +29,73 @@ import {
   uninstallPageTopShortcut,
   updatePageTopShortcut,
 } from "./pageTopShortcut";
+import { hideTooltip } from "../shared/tooltip";
+import { TOP_BUTTON_CLASS } from "../shared/constants";
 
 let cachedSettings: Settings | null = null;
 let goToTop: GoToTopController | null = null;
+let activeOnCurrentRoute = false;
+let lastPathname: string | null = null;
 
 async function init(): Promise<void> {
   cachedSettings = await getSettings();
   debugLog("content script initialized", cachedSettings);
 
-  applyAll();
-  observeGitHubUpdates(() => safely("refresh enhancements", applyEnhancements));
+  syncForCurrentRoute({ forceFullApply: true });
+  observeGitHubUpdates(({ requiresFullSync, urlChanged }) => {
+    safely("sync route enhancements", () =>
+      syncForCurrentRoute({ forceFullApply: requiresFullSync || urlChanged })
+    );
+  });
 
   onSettingsChanged((next) => {
     cachedSettings = next;
-    applyAll();
+    syncForCurrentRoute({ forceFullApply: true });
   });
 }
 
+export function isSupportedPrFilesRoute(pathname: string): boolean {
+  return /^\/[^/]+\/[^/]+\/pull\/\d+\/(?:files|changes)\/?$/.test(pathname);
+}
+
+function syncForCurrentRoute({
+  forceFullApply,
+}: {
+  forceFullApply: boolean;
+}): void {
+  const pathname = location.pathname;
+  const routeChanged = lastPathname !== null && pathname !== lastPathname;
+  lastPathname = pathname;
+
+  const shouldBeActive = isSupportedPrFilesRoute(pathname);
+
+  if (!shouldBeActive) {
+    if (activeOnCurrentRoute || routeChanged || forceFullApply) {
+      safely("uninstall enhancements", uninstallAll);
+    }
+    activeOnCurrentRoute = false;
+    return;
+  }
+
+  if (activeOnCurrentRoute && routeChanged) {
+    safely("reset route enhancements", uninstallAll);
+  }
+
+  activeOnCurrentRoute = true;
+
+  if (forceFullApply || routeChanged) {
+    applyAll();
+    return;
+  }
+
+  safely("refresh enhancements", applyEnhancements);
+}
+
 function applyAll(): void {
+  if (!cachedSettings || !activeOnCurrentRoute) {
+    return;
+  }
+
   safely("apply enhancements", applyEnhancements);
   safely("apply back to top", applyGoToTop);
   safely("apply review flow", applyReviewFlow);
@@ -51,8 +103,19 @@ function applyAll(): void {
   safely("apply page top shortcut", applyPageTopShortcut);
 }
 
+function uninstallAll(): void {
+  uninstallFileHeaderEnhancements();
+  goToTop?.uninstall();
+  goToTop = null;
+  uninstallGoToTopButton();
+  uninstallReviewFlowRail();
+  uninstallFileTabs();
+  uninstallPageTopShortcut();
+  hideTooltip();
+}
+
 function applyEnhancements(): void {
-  if (!cachedSettings) {
+  if (!cachedSettings || !activeOnCurrentRoute) {
     return;
   }
   enhanceFileHeaders({
@@ -68,7 +131,7 @@ function applyEnhancements(): void {
 }
 
 function applyGoToTop(): void {
-  if (!cachedSettings) {
+  if (!cachedSettings || !activeOnCurrentRoute) {
     return;
   }
   if (!cachedSettings.backToTopEnabled) {
@@ -83,6 +146,11 @@ function applyGoToTop(): void {
     shiftClick: cachedSettings.backToTopShiftClickAction,
   };
 
+  if (goToTop && !document.querySelector(`.${TOP_BUTTON_CLASS}`)) {
+    goToTop.uninstall();
+    goToTop = null;
+  }
+
   if (goToTop) {
     goToTop.setBindings(bindings);
     return;
@@ -92,7 +160,7 @@ function applyGoToTop(): void {
 }
 
 function applyReviewFlow(): void {
-  if (!cachedSettings) {
+  if (!cachedSettings || !activeOnCurrentRoute) {
     return;
   }
 
@@ -106,7 +174,7 @@ function applyReviewFlow(): void {
 }
 
 function applyFileTabs(): void {
-  if (!cachedSettings) {
+  if (!cachedSettings || !activeOnCurrentRoute) {
     return;
   }
 
@@ -120,7 +188,7 @@ function applyFileTabs(): void {
 }
 
 function applyPageTopShortcut(): void {
-  if (!cachedSettings) {
+  if (!cachedSettings || !activeOnCurrentRoute) {
     return;
   }
 

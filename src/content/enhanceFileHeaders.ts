@@ -17,7 +17,7 @@ export interface EnhanceOptions {
 
 export function enhanceFileHeaders(options: EnhanceOptions): void {
   if (!options.withLocateButton) {
-    removeInjectedButtons();
+    uninstallFileHeaderEnhancements();
     return;
   }
 
@@ -54,7 +54,7 @@ export function enhanceFileHeaders(options: EnhanceOptions): void {
   }
 }
 
-function removeInjectedButtons(): void {
+export function uninstallFileHeaderEnhancements(): void {
   removeButtons(BUTTON_CLASS);
   removeButtons(EDITOR_BUTTON_CLASS);
 }
