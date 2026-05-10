@@ -1,94 +1,104 @@
 # GitHub PR File Explorer Enhancer
 
-**What this repo is:** A Manifest V3 Chrome extension that improves GitHub **pull request** review on the **Files changed** tab — the URL shape `https://github.com/<owner>/<repo>/pull/<n>/files`. It injects controls into that page (locate a file in the sidebar tree, IDE-style file tabs, a compact review/navigation rail, back-to-top, optional Cursor/VS Code copy-commands, and more).
+Chrome extension (Manifest V3) that adds review helpers on GitHub pull requests on the **Files changed** view (`/pull/<n>/files` or `/pull/<n>/changes`).
 
-**Who it’s for:**
+## Run from source
 
-- **Developers cloning this repo** — build from source and load **unpacked** from `dist/` while you work.
-- **Reviewers using a built copy** — install once, then use GitHub as usual with the extra UI.
+**Requirements:** Node.js 18+ and a Chromium browser (Chrome, Edge, Brave, Arc, etc.).
 
----
+1. Clone and install dependencies:
 
-## Development setup (Chrome, Load unpacked)
+   ```bash
+   git clone <repo-url> pr-file-explorer
+   cd pr-file-explorer
+   npm install
+   ```
 
-You need **Node.js 18+** and a Chromium browser (Chrome, Edge, Brave, Arc, etc.).
+2. Build the extension into **`dist/`**:
 
-```bash
-git clone <repo-url> pr-file-explorer
-cd pr-file-explorer
-npm install
-```
+   - **Daily development:** `npm run dev` — keeps watching and rebuilding `dist/`.
+   - **One-shot:** `npm run build` — production bundle (runs `tsc` as well).
 
-Generate the extension bundle:
+3. Load it in the browser:
 
-| Command | When to use |
-| --- | --- |
-| `npm run dev` | Daily development: Vite watches files and writes to **`dist/`**. Keep it running. |
-| `npm run build` | One-shot production build into **`dist/`** (also runs `tsc`). |
+   1. Open `chrome://extensions` (Edge: `edge://extensions`).
+   2. Enable **Developer mode**.
+   3. Click **Load unpacked**.
+   4. Select this repo’s **`dist/`** folder (build output — not the repo root or `src/`).
 
-**Load unpacked (once per machine / clone):**
+4. After code or dependency changes: rebuild if needed, click **Reload** on the extension card, then reload the GitHub **Files changed** tab if the page looks stale.
 
-1. Open **`chrome://extensions`** (Edge: `edge://extensions`).
-2. Turn on **Developer mode** (top right).
-3. Click **Load unpacked**.
-4. Choose this repository’s **`dist/`** folder — the **build output**, not the repo root and not `src/`.
+Optional: pin the extension for quicker access to the popup. TypeScript-only check: `npm run typecheck`.
 
-**While developing:**
+Troubleshooting, ZIP installs, and editor setup details: [INSTALL.md](INSTALL.md).
 
-1. After each rebuild, click **Reload** on the extension card in `chrome://extensions` when something doesn’t update (manifest, popup, options, service worker, or stubborn content-script changes).
-2. Hard-refresh or reload the GitHub **Files changed** tab if the page still shows old behavior.
+## Quick start
 
-**After `git pull`:** run `npm install` if dependencies changed, rebuild (`dev` or `build`), then **Reload** the extension.
-
-Optional: pin **GitHub PR File Explorer Enhancer** from the extensions puzzle menu so the popup is one click away.
-
-Other scripts: `npm run typecheck` — TypeScript check only.
-
-More detail for ZIP installs and troubleshooting: [INSTALL.md](INSTALL.md).
+1. Open a PR on GitHub and go to **Files changed**.
+2. Use the **extension popup** (toolbar icon) for most on/off switches and shortcuts.
+3. Use **Extension options** (`chrome://extensions` → this extension → **Extension options**) for the **editor command** (Cursor / VS Code), repo root, and enabling that control on file headers.
 
 ---
 
-## Using the extension (reviewers)
+## Features
 
-1. Open any PR on GitHub and switch to **Files changed**.
-2. Leave the **file tree** open on the left if you want **locate in explorer** to scroll and highlight the current file.
-3. Click the **extension icon** in the toolbar to turn features on or off and configure back-to-top clicks.
-4. For editor copy-commands: **Extension options** — from `chrome://extensions` → this extension → **Extension options** — set editor (`cursor` / `code`), enable/disable the control, and your **local repo root**.
+Each item lists **where it lives** and **how you control it**.
 
-The first time you use the **terminal-style button** on a file header (copy open-in-editor command), you’ll be prompted for editor and repo path. You can reopen that flow from the options page or with **Alt/Option-click** on that button (see [INSTALL.md](INSTALL.md)).
+### Pull request tabs menu
+
+- **What:** Floating **menu** (bottom-right, icon with horizontal bars) opens links to Conversation, Commits, Checks, Files changed, and other PR tabs scraped from the page — so you can leave the diff without scrolling to GitHub’s header.
+- **Where:** Files changed page only.
+- **Settings:** Always on when the extension is active on that route (no popup toggle).
+
+### File tabs
+
+- **What:** A tab strip above the diff for fast switching between files (preview vs pinned tabs).
+- **Where:** Above the diff list on Files changed.
+- **Settings:** Popup → **File tabs**.  
+- **Behavior:** Single-click a file header for an italic **preview** tab; double-click the header or tab, or use **pin**, to keep a **permanent** tab.
+
+### Sync file tree
+
+- **What:** While you scroll the diff, the matching entry in the left **file tree** stays highlighted (and the tree scrolls when needed) so you always see where you are in the PR.
+- **Where:** Left sidebar tree + diff viewport.
+- **Settings:** Popup → **Sync file tree** (off by default).
+
+### Review flow rail
+
+- **What:** Floating controls for comment-driven review: previous/next comment, next unviewed file, copy review context as Markdown, copy unresolved comments (e.g. for an AI agent). Optional **dots** on tree items that have visible review threads.
+- **Where:** Floating strip on Files changed (when enabled).
+- **Settings:** Popup → **Review flow rail**, plus individual switches for each rail button.
+
+### File explorer locate
+
+- **What:** Icon on each diff file header that scrolls the sidebar tree to that file and briefly highlights it.
+- **Where:** File headers on Files changed.
+- **Settings:** Popup → **File explorer locate**.
+
+### Back to top button
+
+- **What:** After you scroll down, a floating button appears to jump **Files top** or **Page top**.
+- **Where:** Bottom area of the viewport (next to the PR tabs menu when both show).
+- **Settings:** Popup → **Back to top button**, with separate targets for **Click** vs **Shift + click**, and **Swap click and shift-click**.
+
+### Scroll-to-top shortcut
+
+- **What:** Keyboard shortcut that scrolls smoothly to the **very top of the page** (same idea as “page top”, independent of the back-to-top button targets).
+- **Where:** Global on Files changed while the tab is focused.
+- **Settings:** Popup → **Scroll-to-top shortcut** and recorded combo (default **Shift+T**).
+
+### Open in editor command
+
+- **What:** Optional control on each file header copies a ready-to-paste terminal command (e.g. `cursor -g "/your/clone/path/file.ts:123"`) using your editor choice and **local repo root**.
+- **Where:** File headers on Files changed.
+- **Settings:** **Extension options** only — editor (`cursor` / `code`), repo root, enable/disable. First-time setup may prompt when you use the button; **Alt/Option-click** can reopen setup (see [INSTALL.md](INSTALL.md)).
 
 ---
 
-## Features (what each part does)
+## Repository notes
 
-### Toolbar popup
-
-Central switchboard while browsing GitHub (click the extension icon):
-
-- **Locate file in explorer** — Adds an icon on each diff file header. Click it to scroll the PR file tree to that file and briefly highlight it so you don’t lose your place on huge PRs.
-- **IDE-like file tabs** — Adds a tab strip above the diff so you can treat files like editor tabs: quick switching without hunting the tree.
-- **Review-flow rail** — A compact strip of actions for comment-driven review (see below). You can turn the whole rail off or hide individual buttons.
-- **Floating back-to-top** — After you scroll down, a button appears to jump back up. You choose separately what a normal click vs **Shift+click** does: **top of the Files region** vs **top of the whole page**, and you can swap those two behaviors in one click.
-- **Comment dots** — When the review rail is relevant, optional subtle dots in the file tree mark files that have visible review threads.
-
-### On the Files changed page
-
-- **Locate** — Syncs the sidebar tree with the file you’re reading; useful when GitHub virtualizes or paginates long diffs.
-- **Back to top** — Uses your popup settings so single-click and Shift+click match how you like to move (files-first vs whole-page).
-- **File tabs** — **Single-click** a file header opens an italic **preview** tab (replaced when you preview another file). **Double-click** the header or tab, or use the **pin** control, to make a **permanent** tab. Click tabs to jump between files; closing a tab updates header pin state.
-- **Review rail** — Typical actions: previous/next **review comment**, jump to **next unviewed** file, **copy review context** as Markdown, **copy unresolved comments** (e.g. for an AI agent). Shows **comment status** for the file you’re in.
-- **Comment dots** — At-a-glance which paths still have visible threads.
-
-### Extension options page
-
-- **Editor command** — Optional control on each header copies a line-ready command such as `cursor -g "/your/clone/path/file.ts:123"` using your chosen editor and **repo root** so paths resolve correctly on your machine.
-
----
-
-## Repo internals (optional)
-
-**Stack:** TypeScript, Vite, `@crxjs/vite-plugin`, Manifest V3; vanilla DOM on `github.com`; React + Tailwind for popup and options.
+**Stack:** TypeScript, Vite, `@crxjs/vite-plugin`, Manifest V3; DOM enhancements on `github.com`; React + Tailwind for popup and options.
 
 **Design docs:** [Requirements](docs/requirements.md), [DOM map](docs/dom-map.md), [Implementation plan](docs/implementation-plan.md).
 
-**Legacy userscript:** `src/github-pr-file-explorer.user.js` still exists for Tampermonkey/DevTools-style use; the shipped extension is built from the TypeScript under `src/`.
+**Legacy userscript:** `src/github-pr-file-explorer.user.js` — Tampermonkey-style alternative; the packaged extension is built from `src/` TypeScript.
