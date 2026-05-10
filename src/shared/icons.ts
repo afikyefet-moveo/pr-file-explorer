@@ -2,6 +2,7 @@ export type IconName =
   | "locate"
   | "editor"
   | "goToTop"
+  | "prNavMenu"
   | "comment"
   | "commentDown"
   | "commentUp"
@@ -37,6 +38,15 @@ const GO_TO_TOP_ICON_SVG = [
   ' fill="currentColor" display="inline-block" overflow="visible"',
   ' style="vertical-align: text-bottom;">',
   '<path d="M3.47 7.78a.75.75 0 0 0 1.06 0L7.25 5.06v8.19a.75.75 0 0 0 1.5 0V5.06l2.72 2.72a.749.749 0 1 0 1.06-1.06L8.53 2.72a.749.749 0 0 0-1.06 0L3.47 6.72a.75.75 0 0 0 0 1.06Z"></path>',
+  "</svg>",
+].join("");
+
+const PR_NAV_MENU_ICON_SVG = [
+  '<svg data-component="Octicon" aria-hidden="true" focusable="false"',
+  ' class="octicon octicon-three-bars" viewBox="0 0 16 16" width="16" height="16"',
+  ' fill="currentColor" display="inline-block" overflow="visible"',
+  ' style="vertical-align: text-bottom;">',
+  '<path d="M1 7.75A.75.75 0 0 1 1.75 7h12.5a.75.75 0 0 1 0 1.5H1.75A.75.75 0 0 1 1 7.75Zm0-5A.75.75 0 0 1 1.75 2h12.5a.75.75 0 0 1 0 1.5H1.75A.75.75 0 0 1 1 2.75Zm0 10a.75.75 0 0 1 .75-.75h12.5a.75.75 0 0 1 0 1.5H1.75a.75.75 0 0 1-.75-.75Z"></path>',
   "</svg>",
 ].join("");
 
@@ -114,6 +124,8 @@ export function getIconSvg(name: IconName): string {
       return EDITOR_ICON_SVG;
     case "goToTop":
       return GO_TO_TOP_ICON_SVG;
+    case "prNavMenu":
+      return PR_NAV_MENU_ICON_SVG;
     case "comment":
       return COMMENT_ICON_SVG;
     case "commentDown":

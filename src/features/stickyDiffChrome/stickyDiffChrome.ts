@@ -1,8 +1,4 @@
-import {
-  FILE_TABS_BAR_CLASS,
-  PR_NAV_ROW_CLASS,
-  STICKY_STACK_CLASS,
-} from "../../shared/constants";
+import { FILE_TABS_BAR_CLASS, STICKY_STACK_CLASS } from "../../shared/constants";
 import { getStickyHeaderOffset } from "../../shared/stickyHeader";
 
 export const STICKY_STACK_TOP_PROPERTY = "--pr-file-explorer-sticky-top";
@@ -73,7 +69,7 @@ export function getStickyStackFromChild(element: HTMLElement | null): HTMLElemen
   return element?.closest<HTMLElement>(`.${STICKY_STACK_CLASS}`) ?? null;
 }
 
-/** Height of extension-owned sticky rows below GitHub’s sticky header (PR nav + file tabs). */
+/** Height of extension-owned sticky rows below GitHub’s sticky header (file tabs bar only). */
 export function getStickyChromeBelowHeaderHeight(): number {
   const stack = document.querySelector<HTMLElement>(`.${STICKY_STACK_CLASS}`);
   if (!stack?.isConnected) {
@@ -81,13 +77,6 @@ export function getStickyChromeBelowHeaderHeight(): number {
   }
 
   let total = 0;
-  const nav = stack.querySelector<HTMLElement>(`.${PR_NAV_ROW_CLASS}`);
-  if (nav) {
-    const navHeight = nav.getBoundingClientRect().height;
-    if (navHeight > 0) {
-      total += navHeight;
-    }
-  }
 
   const tabs = stack.querySelector<HTMLElement>(`.${FILE_TABS_BAR_CLASS}`);
   if (tabs?.dataset["visible"] === "true") {
@@ -106,21 +95,15 @@ export function maybeRemoveStickyStackIfEmpty(): void {
     return;
   }
 
-  const hasNav = Boolean(stack.querySelector<HTMLElement>(`.${PR_NAV_ROW_CLASS}`));
   const hasTabs = Boolean(
     stack.querySelector<HTMLElement>(`.${FILE_TABS_BAR_CLASS}`)
   );
 
-  if (!hasNav && !hasTabs) {
+  if (!hasTabs) {
     stack.remove();
   }
 }
 
 export function placeFileTabsBarInStack(stack: HTMLElement, bar: HTMLElement): void {
-  const nav = stack.querySelector<HTMLElement>(`.${PR_NAV_ROW_CLASS}`);
-  if (nav) {
-    nav.insertAdjacentElement("afterend", bar);
-  } else {
-    stack.appendChild(bar);
-  }
+  stack.appendChild(bar);
 }

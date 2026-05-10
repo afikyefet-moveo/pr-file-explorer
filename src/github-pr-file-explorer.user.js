@@ -441,17 +441,39 @@
   }
 
   function getStickyHeaderOffset() {
-    var stickyHeader =
-      document.querySelector("[class*='StickyHeader']") ||
-      document.querySelector("[class*='pagehead']") ||
-      document.querySelector(".js-sticky");
-
-    if (!stickyHeader) {
+    var selector = [
+      "[class*='use-sticky-header-module__stickyHeader']",
+      "[class*='PullRequestFilesToolbar-module__toolbar']",
+      "[class*='StickyHeader']",
+      "[class*='pagehead']",
+      ".js-sticky",
+    ].join(",");
+    var candidates = Array.prototype.slice.call(
+      document.querySelectorAll(selector)
+    );
+    if (!candidates.length) {
       return 0;
     }
-
-    var rect = stickyHeader.getBoundingClientRect();
-    return rect.height > 0 && rect.top <= 1 ? rect.height : 0;
+    var tolerance = 2;
+    var maxIterations = 10;
+    var offset = 0;
+    for (var i = 0; i < maxIterations; i++) {
+      var next = offset;
+      for (var j = 0; j < candidates.length; j++) {
+        var rect = candidates[j].getBoundingClientRect();
+        if (rect.height <= 0 || rect.width <= 0) {
+          continue;
+        }
+        if (rect.top <= offset + tolerance && rect.bottom > offset) {
+          next = Math.max(next, rect.bottom);
+        }
+      }
+      if (next <= offset + 0.5) {
+        break;
+      }
+      offset = next;
+    }
+    return offset;
   }
 
   function getGoToTopIconSvg() {

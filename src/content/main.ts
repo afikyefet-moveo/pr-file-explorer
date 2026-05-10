@@ -36,10 +36,10 @@ import {
   uninstallExplorerSync,
 } from "../features/explorerSync/explorerSync";
 import {
-  installStickyPrNav,
-  refreshStickyPrNav,
-  uninstallStickyPrNav,
-} from "../features/prNavSticky/prNavSticky";
+  installPrNavMenu,
+  refreshPrNavMenu,
+  uninstallPrNavMenu,
+} from "../features/prNavMenu/prNavMenu";
 import { hideTooltip } from "../shared/tooltip";
 import { TOP_BUTTON_CLASS } from "../shared/constants";
 
@@ -107,7 +107,7 @@ function applyAll(): void {
     return;
   }
 
-  safely("apply sticky pr nav", applyStickyPrNav);
+  safely("apply pr nav menu", applyPrNavMenu);
   safely("apply enhancements", applyEnhancements);
   safely("apply back to top", applyGoToTop);
   safely("apply review flow", applyReviewFlow);
@@ -117,7 +117,7 @@ function applyAll(): void {
 }
 
 function uninstallAll(): void {
-  uninstallStickyPrNav();
+  uninstallPrNavMenu();
   uninstallFileHeaderEnhancements();
   goToTop?.uninstall();
   goToTop = null;
@@ -146,14 +146,14 @@ function applyEnhancements(): void {
   if (cachedSettings.explorerSyncEnabled) {
     refreshExplorerSync();
   }
-  refreshStickyPrNav();
+  refreshPrNavMenu();
 }
 
-function applyStickyPrNav(): void {
+function applyPrNavMenu(): void {
   if (!activeOnCurrentRoute) {
     return;
   }
-  installStickyPrNav();
+  installPrNavMenu();
 }
 
 function applyGoToTop(): void {

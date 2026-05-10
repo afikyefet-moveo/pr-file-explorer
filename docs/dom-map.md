@@ -7,6 +7,24 @@ This map is based on the saved examples in the repository:
 - `pr-code-view-panel.html`
 - `pr-file-section-header.html`
 - `pr-page-header-sticky.html`
+- `pr-tabs-nav.html`
+
+## PR navigation tabs (Conversation / Commits / Checks / Files changed)
+
+GitHub may render PR tabs as Primer TabNav (see `pr-tabs-nav.html`) rather than `nav.UnderlineNav`:
+
+```css
+nav[aria-label="Pull request navigation tabs"]
+```
+
+The extension exposes the same destinations from a **floating menu** (bottom-right “three bars” button → dropdown), so GitHub’s sticky file headers are not covered:
+
+```css
+.pr-file-explorer-pr-nav-menu
+.pr-file-explorer-pr-nav-dropdown
+```
+
+Optional file tabs still use `.pr-file-explorer-sticky-stack` above `[data-testid="progressive-diffs-list"]` when enabled; `top` follows GitHub’s stacked sticky chrome (site header + PR files toolbar).
 
 ## File Explorer
 
