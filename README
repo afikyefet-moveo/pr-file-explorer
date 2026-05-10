@@ -93,7 +93,7 @@ Toolbar popup (click the extension icon while on any page):
 
 - Toggle the "locate file in explorer" icon on/off.
 - Toggle IDE-like file tabs on/off.
-- Toggle the review-flow rail on/off, with inline explanations for next comment, next unviewed, and copy context.
+- Toggle the review-flow rail on/off, plus each rail button individually.
 - Toggle the floating back-to-top button on/off.
 - Pick what plain click vs Shift-click does for back-to-top: jump to **Files top** or **Page top**, independently configurable.
 - Swap the two with one click.
@@ -109,7 +109,7 @@ On a PR page, all on by default:
 - IDE-like file tabs at the top of the diff view: single-click a file header to open an italic preview tab, double-click the file header or tab to keep it as a permanent tab, and click tabs to jump back to files.
 - Pin icon in each file header for explicitly keeping or removing a permanent tab.
 - Terminal icon that copies a `cursor -g` or `code -g` command for the file at the visible right-side line. The first click prompts for the local repo root.
-- Compact review rail with next comment, next unviewed file, and copy review context actions.
+- Compact review rail with previous/next comment, next unviewed file, and copy review context actions.
 - Current-file comment status in the review rail.
 - Subtle file-explorer dots for files with visible review comments.
 
@@ -120,7 +120,8 @@ On a PR page, all on by default:
 | Locate file in explorer | On | Toolbar popup | Adds an icon to each file header and scrolls `#pr-file-tree` to the matching file. |
 | File tabs | On | Toolbar popup | Adds an IDE-like tab row above the sticky file header; preview tabs are italic until double-clicked or pinned. |
 | Back to top | On | Toolbar popup | Click and Shift-click targets are configurable. |
-| Review flow rail | On | Toolbar popup | Next comment, next unviewed file, copy review context, and current-file comment status. |
+| Review flow rail | On | Toolbar popup | Previous/next comment, next unviewed file, copy review context, and current-file comment status. |
+| Review rail buttons | On | Toolbar popup | Previous comment, next comment, next unviewed, and copy context can be shown or hidden independently. |
 | Comment dots | On with review flow | Toolbar popup | Adds a subtle dot to files with visible review comments. |
 | Editor command copy | On | Options page | First use prompts for repo root; direct editor opening is not implemented yet. |
 
@@ -139,6 +140,10 @@ prFileExplorer.backToTopEnabled
 prFileExplorer.backToTopClickAction         # "filesTop" | "pageTop"
 prFileExplorer.backToTopShiftClickAction    # "filesTop" | "pageTop"
 prFileExplorer.reviewFlowEnabled
+prFileExplorer.reviewFlowPreviousCommentEnabled
+prFileExplorer.reviewFlowNextCommentEnabled
+prFileExplorer.reviewFlowNextUnviewedEnabled
+prFileExplorer.reviewFlowCopyContextEnabled
 prFileExplorer.fileTabsEnabled
 prFileExplorer.editorEnabled
 prFileExplorer.editor                       # "cursor" | "code"
@@ -162,7 +167,7 @@ You can also configure (or fully disable) it from the options page (`chrome://ex
 9. Open the toolbar popup, swap the click and shift-click bindings, then test that the behavior flips.
 10. Toggle the locate feature off in the popup and confirm the icons disappear from file headers.
 11. (Optional) Enable the editor command icon in options, then click it on a file header and confirm a command like `cursor -g "/path/to/repo/file.ts:123"` is copied.
-12. Use the review rail to jump to the next comment, jump to the next unviewed file, or copy Markdown review context.
+12. Use the review rail to jump to the previous or next comment, jump to the next unviewed file, or copy Markdown review context.
 13. Confirm files with visible review threads get a subtle dot in the file explorer.
 14. Single-click a file header and confirm it appears as an italic preview tab.
 15. Single-click another file header and confirm the preview tab is replaced.
@@ -173,10 +178,10 @@ You can also configure (or fully disable) it from the options page (`chrome://ex
 
 - Large PR: locate icon scrolls the file explorer correctly, back-to-top works, and floating controls do not cover GitHub review buttons.
 - File tabs: preview tabs are italic and replaceable, double-click makes them permanent, tabs jump to the correct files, active tab follows scroll position, and closing a tab updates the header pin state.
-- PR with comments: next comment jumps through visible threads, current-file status changes while scrolling, and sidebar dots only appear on commented files.
+- PR with comments: previous/next comment jumps through visible threads, current-file status changes while scrolling, and sidebar dots only appear on commented files.
 - Viewed state: next unviewed enables when any file is `Not Viewed`, disables when none are visible, and lands on the expected file.
 - File explorer states: visible, filtered, collapsed/missing, and duplicate basenames in different folders.
-- Settings: review-flow toggle removes/restores the rail and dots; locate and back-to-top toggles remove/restore their controls.
+- Settings: review-flow toggle removes/restores the rail and dots; individual review rail button toggles hide/show only their buttons; locate and back-to-top toggles remove/restore their controls.
 
 Debug logging can be enabled in the page console with:
 

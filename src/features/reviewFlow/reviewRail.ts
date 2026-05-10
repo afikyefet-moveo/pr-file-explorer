@@ -5,7 +5,8 @@ import {
   REVIEW_STATUS_CLASS,
 } from "../../shared/constants";
 import {
-  getCommentIconSvg,
+  getCommentDownIconSvg,
+  getCommentUpIconSvg,
   getCopyContextIconSvg,
   getUnviewedIconSvg,
 } from "../../shared/icons";
@@ -19,15 +20,23 @@ interface RailState {
     state: ReviewStatusState;
     tooltip: string;
   };
+  previousComment: {
+    visible: boolean;
+    enabled: boolean;
+    tooltip: string;
+  };
   nextComment: {
+    visible: boolean;
     enabled: boolean;
     tooltip: string;
   };
   nextUnviewed: {
+    visible: boolean;
     enabled: boolean;
     tooltip: string;
   };
   copyContext: {
+    visible: boolean;
     enabled: boolean;
     tooltip: string;
   };
@@ -38,7 +47,12 @@ export function createReviewRail(onClick: (action: ReviewAction, button: HTMLEle
   rail.className = REVIEW_RAIL_CLASS;
   rail.dataset["visible"] = "false";
   rail.appendChild(createStatus());
-  rail.appendChild(createRailButton("next-comment", "Next comment", getCommentIconSvg()));
+  rail.appendChild(
+    createRailButton("previous-comment", "Previous comment", getCommentUpIconSvg())
+  );
+  rail.appendChild(
+    createRailButton("next-comment", "Next comment", getCommentDownIconSvg())
+  );
   rail.appendChild(
     createRailButton("next-unviewed", "Next unviewed file", getUnviewedIconSvg())
   );
@@ -62,6 +76,27 @@ export function createReviewRail(onClick: (action: ReviewAction, button: HTMLEle
 
 export function applyRailState(rail: HTMLElement, state: RailState): void {
   rail.dataset["visible"] = state.visible ? "true" : "false";
+  setButtonVisibility(
+    rail.querySelector<HTMLButtonElement>("[data-review-action='previous-comment']"),
+    state.previousComment.visible
+  );
+  setButtonVisibility(
+    rail.querySelector<HTMLButtonElement>("[data-review-action='next-comment']"),
+    state.nextComment.visible
+  );
+  setButtonVisibility(
+    rail.querySelector<HTMLButtonElement>("[data-review-action='next-unviewed']"),
+    state.nextUnviewed.visible
+  );
+  setButtonVisibility(
+    rail.querySelector<HTMLButtonElement>("[data-review-action='copy-context']"),
+    state.copyContext.visible
+  );
+  setButtonEnabled(
+    rail.querySelector<HTMLButtonElement>("[data-review-action='previous-comment']"),
+    state.previousComment.enabled,
+    state.previousComment.tooltip
+  );
   setButtonEnabled(
     rail.querySelector<HTMLButtonElement>("[data-review-action='next-comment']"),
     state.nextComment.enabled,
@@ -123,6 +158,17 @@ function createRailButton(
   return button;
 }
 
+function setButtonVisibility(
+  button: HTMLButtonElement | null,
+  visible: boolean
+): void {
+  if (!button) {
+    return;
+  }
+
+  button.hidden = !visible;
+}
+
 function setButtonEnabled(
   button: HTMLButtonElement | null,
   enabled: boolean,
@@ -132,7 +178,7 @@ function setButtonEnabled(
     return;
   }
 
-  button.disabled = !enabled;
+  button.disabled = button.hidden || !enabled;
   button.title = tooltip;
   updateTooltipText(button, tooltip);
 }
@@ -148,4 +194,3 @@ function setStatus(status: HTMLElement | null, state: RailState): void {
 }
 
 export type { RailState };
-

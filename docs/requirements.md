@@ -164,7 +164,8 @@ Best-effort DOM helpers:
 ### Prototype Behavior
 
 - A compact floating review rail appears on PR files pages.
-- The rail includes next comment, next unviewed file, and copy review context actions.
+- The rail includes previous/next comment, next unviewed file, and copy review context actions.
+- The previous comment, next comment, next unviewed, and copy context buttons can be shown or hidden independently from the toolbar popup.
 - Review context is copied as Markdown with file path, inferred line/range, PR URL, and selected text when present.
 - Files with visible review threads receive a subtle dot in the file explorer.
 - Current-file status shows no comments, comments, or unresolved only when the DOM exposes a confident resolve action.

@@ -7,6 +7,10 @@ export interface Settings {
   backToTopClickAction: ScrollTarget;
   backToTopShiftClickAction: ScrollTarget;
   reviewFlowEnabled: boolean;
+  reviewFlowPreviousCommentEnabled: boolean;
+  reviewFlowNextCommentEnabled: boolean;
+  reviewFlowNextUnviewedEnabled: boolean;
+  reviewFlowCopyContextEnabled: boolean;
   fileTabsEnabled: boolean;
   editorEnabled: boolean;
   editor: EditorChoice;
@@ -21,6 +25,12 @@ const STORAGE_KEYS = {
   backToTopClickAction: "prFileExplorer.backToTopClickAction",
   backToTopShiftClickAction: "prFileExplorer.backToTopShiftClickAction",
   reviewFlowEnabled: "prFileExplorer.reviewFlowEnabled",
+  reviewFlowPreviousCommentEnabled:
+    "prFileExplorer.reviewFlowPreviousCommentEnabled",
+  reviewFlowNextCommentEnabled: "prFileExplorer.reviewFlowNextCommentEnabled",
+  reviewFlowNextUnviewedEnabled:
+    "prFileExplorer.reviewFlowNextUnviewedEnabled",
+  reviewFlowCopyContextEnabled: "prFileExplorer.reviewFlowCopyContextEnabled",
   fileTabsEnabled: "prFileExplorer.fileTabsEnabled",
   editorEnabled: "prFileExplorer.editorEnabled",
   editor: "prFileExplorer.editor",
@@ -35,6 +45,10 @@ export const DEFAULT_SETTINGS: Settings = {
   backToTopClickAction: "filesTop",
   backToTopShiftClickAction: "pageTop",
   reviewFlowEnabled: true,
+  reviewFlowPreviousCommentEnabled: true,
+  reviewFlowNextCommentEnabled: true,
+  reviewFlowNextUnviewedEnabled: true,
+  reviewFlowCopyContextEnabled: true,
   fileTabsEnabled: true,
   editorEnabled: true,
   editor: "cursor",
@@ -67,6 +81,22 @@ export async function getSettings(): Promise<Settings> {
       stored[STORAGE_KEYS.reviewFlowEnabled],
       DEFAULT_SETTINGS.reviewFlowEnabled
     ),
+    reviewFlowPreviousCommentEnabled: coerceBool(
+      stored[STORAGE_KEYS.reviewFlowPreviousCommentEnabled],
+      DEFAULT_SETTINGS.reviewFlowPreviousCommentEnabled
+    ),
+    reviewFlowNextCommentEnabled: coerceBool(
+      stored[STORAGE_KEYS.reviewFlowNextCommentEnabled],
+      DEFAULT_SETTINGS.reviewFlowNextCommentEnabled
+    ),
+    reviewFlowNextUnviewedEnabled: coerceBool(
+      stored[STORAGE_KEYS.reviewFlowNextUnviewedEnabled],
+      DEFAULT_SETTINGS.reviewFlowNextUnviewedEnabled
+    ),
+    reviewFlowCopyContextEnabled: coerceBool(
+      stored[STORAGE_KEYS.reviewFlowCopyContextEnabled],
+      DEFAULT_SETTINGS.reviewFlowCopyContextEnabled
+    ),
     fileTabsEnabled: coerceBool(
       stored[STORAGE_KEYS.fileTabsEnabled],
       DEFAULT_SETTINGS.fileTabsEnabled
@@ -96,6 +126,14 @@ export async function setSettings(patch: Partial<Settings>): Promise<Settings> {
     [STORAGE_KEYS.backToTopClickAction]: next.backToTopClickAction,
     [STORAGE_KEYS.backToTopShiftClickAction]: next.backToTopShiftClickAction,
     [STORAGE_KEYS.reviewFlowEnabled]: next.reviewFlowEnabled,
+    [STORAGE_KEYS.reviewFlowPreviousCommentEnabled]:
+      next.reviewFlowPreviousCommentEnabled,
+    [STORAGE_KEYS.reviewFlowNextCommentEnabled]:
+      next.reviewFlowNextCommentEnabled,
+    [STORAGE_KEYS.reviewFlowNextUnviewedEnabled]:
+      next.reviewFlowNextUnviewedEnabled,
+    [STORAGE_KEYS.reviewFlowCopyContextEnabled]:
+      next.reviewFlowCopyContextEnabled,
     [STORAGE_KEYS.fileTabsEnabled]: next.fileTabsEnabled,
     [STORAGE_KEYS.editorEnabled]: next.editorEnabled,
     [STORAGE_KEYS.editor]: next.editor,

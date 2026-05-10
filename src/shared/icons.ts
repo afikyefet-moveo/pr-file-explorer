@@ -3,6 +3,8 @@ export type IconName =
   | "editor"
   | "goToTop"
   | "comment"
+  | "commentDown"
+  | "commentUp"
   | "unviewed"
   | "copyContext"
   | "pin"
@@ -45,6 +47,24 @@ const COMMENT_ICON_SVG = [
   ' style="vertical-align: text-bottom;">',
   '<path d="M1.75 1h8.5c.966 0 1.75.784 1.75 1.75v5.5A1.75 1.75 0 0 1 10.25 10H7.061l-2.574 2.573A1.458 1.458 0 0 1 2 11.543V10h-.25A1.75 1.75 0 0 1 0 8.25v-5.5C0 1.784.784 1 1.75 1Zm0 1.5a.25.25 0 0 0-.25.25v5.5c0 .138.112.25.25.25h1a.75.75 0 0 1 .75.75v2.19l2.72-2.72a.749.749 0 0 1 .53-.22h3.5a.25.25 0 0 0 .25-.25v-5.5a.25.25 0 0 0-.25-.25Z"></path>',
   '<path d="M14.25 4h-.75v1.5h.75c.138 0 .25.112.25.25v5.5a.25.25 0 0 1-.25.25h-1a.75.75 0 0 0-.75.75v1.19l-1.72-1.72a.749.749 0 0 0-.53-.22H6.5v1.5h3.439l1.574 1.573A1.458 1.458 0 0 0 14 13.543V13h.25A1.75 1.75 0 0 0 16 11.25v-5.5A1.75 1.75 0 0 0 14.25 4Z"></path>',
+  "</svg>",
+].join("");
+
+const COMMENT_DOWN_ICON_SVG = [
+  '<svg data-component="Octicon" aria-hidden="true" focusable="false"',
+  ' class="octicon octicon-arrow-down" viewBox="0 0 16 16" width="16" height="16"',
+  ' fill="currentColor" display="inline-block" overflow="visible"',
+  ' style="vertical-align: text-bottom;">',
+  '<path d="M12.53 8.22a.75.75 0 0 0-1.06 0l-2.72 2.72V2.75a.75.75 0 0 0-1.5 0v8.19L4.53 8.22a.749.749 0 1 0-1.06 1.06l4 4a.749.749 0 0 0 1.06 0l4-4a.75.75 0 0 0 0-1.06Z"></path>',
+  "</svg>",
+].join("");
+
+const COMMENT_UP_ICON_SVG = [
+  '<svg data-component="Octicon" aria-hidden="true" focusable="false"',
+  ' class="octicon octicon-arrow-up" viewBox="0 0 16 16" width="16" height="16"',
+  ' fill="currentColor" display="inline-block" overflow="visible"',
+  ' style="vertical-align: text-bottom;">',
+  '<path d="M3.47 7.78a.75.75 0 0 0 1.06 0l2.72-2.72v8.19a.75.75 0 0 0 1.5 0V5.06l2.72 2.72a.749.749 0 1 0 1.06-1.06l-4-4a.749.749 0 0 0-1.06 0l-4 4a.75.75 0 0 0 0 1.06Z"></path>',
   "</svg>",
 ].join("");
 
@@ -96,6 +116,10 @@ export function getIconSvg(name: IconName): string {
       return GO_TO_TOP_ICON_SVG;
     case "comment":
       return COMMENT_ICON_SVG;
+    case "commentDown":
+      return COMMENT_DOWN_ICON_SVG;
+    case "commentUp":
+      return COMMENT_UP_ICON_SVG;
     case "unviewed":
       return UNVIEWED_ICON_SVG;
     case "copyContext":
@@ -111,6 +135,8 @@ export const getLocateIconSvg = (): string => getIconSvg("locate");
 export const getEditorIconSvg = (): string => getIconSvg("editor");
 export const getGoToTopIconSvg = (): string => getIconSvg("goToTop");
 export const getCommentIconSvg = (): string => getIconSvg("comment");
+export const getCommentDownIconSvg = (): string => getIconSvg("commentDown");
+export const getCommentUpIconSvg = (): string => getIconSvg("commentUp");
 export const getUnviewedIconSvg = (): string => getIconSvg("unviewed");
 export const getCopyContextIconSvg = (): string => getIconSvg("copyContext");
 export const getPinIconSvg = (): string => getIconSvg("pin");

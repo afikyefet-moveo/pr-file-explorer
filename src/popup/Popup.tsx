@@ -1,10 +1,11 @@
 import { useEffect, useState, type ReactElement } from "react";
 import {
+  ArrowDown,
   ArrowLeftRight,
+  ArrowUp,
   Copy,
   Eye,
   Loader2,
-  MessageSquareText,
   Pin,
 } from "lucide-react";
 
@@ -74,6 +75,7 @@ export function Popup(): ReactElement {
   };
 
   const bindingsDisabled = !settings.backToTopEnabled;
+  const reviewRailControlsDisabled = !settings.reviewFlowEnabled;
 
   return (
     <div className="space-y-3 p-4">
@@ -115,21 +117,46 @@ export function Popup(): ReactElement {
       />
 
       <div className="space-y-2 rounded-md border bg-muted/35 p-3">
-        <p className="text-xs font-medium">Review rail controls</p>
-        <FeatureHint
-          icon={<MessageSquareText className="h-3.5 w-3.5" />}
-          title="Next comment"
-          description="Jumps to the next visible review thread. Unresolved threads are prioritized only when GitHub exposes that state clearly."
+        <p className="text-xs font-medium">Review rail buttons</p>
+        <ControlRow
+          id="review-flow-previous-comment-enabled"
+          icon={<ArrowUp className="h-3.5 w-3.5" />}
+          title="Previous comment"
+          checked={settings.reviewFlowPreviousCommentEnabled}
+          disabled={reviewRailControlsDisabled}
+          onCheckedChange={(value) =>
+            void update({ reviewFlowPreviousCommentEnabled: value })
+          }
         />
-        <FeatureHint
+        <ControlRow
+          id="review-flow-next-comment-enabled"
+          icon={<ArrowDown className="h-3.5 w-3.5" />}
+          title="Next comment"
+          checked={settings.reviewFlowNextCommentEnabled}
+          disabled={reviewRailControlsDisabled}
+          onCheckedChange={(value) =>
+            void update({ reviewFlowNextCommentEnabled: value })
+          }
+        />
+        <ControlRow
+          id="review-flow-next-unviewed-enabled"
           icon={<Eye className="h-3.5 w-3.5" />}
           title="Next unviewed"
-          description="Jumps to the next file GitHub still marks as Not Viewed."
+          checked={settings.reviewFlowNextUnviewedEnabled}
+          disabled={reviewRailControlsDisabled}
+          onCheckedChange={(value) =>
+            void update({ reviewFlowNextUnviewedEnabled: value })
+          }
         />
-        <FeatureHint
+        <ControlRow
+          id="review-flow-copy-context-enabled"
           icon={<Copy className="h-3.5 w-3.5" />}
           title="Copy context"
-          description="Copies Markdown with file path, inferred line or range, PR URL, and selected text when present."
+          checked={settings.reviewFlowCopyContextEnabled}
+          disabled={reviewRailControlsDisabled}
+          onCheckedChange={(value) =>
+            void update({ reviewFlowCopyContextEnabled: value })
+          }
         />
         <p className="text-[11px] leading-snug text-muted-foreground">
           Files with visible review comments get a small dot in the file explorer.
@@ -296,6 +323,7 @@ interface RowProps {
   title: string;
   description: string;
   checked: boolean;
+  disabled?: boolean;
   onCheckedChange: (next: boolean) => void;
 }
 
@@ -304,6 +332,7 @@ function Row({
   title,
   description,
   checked,
+  disabled = false,
   onCheckedChange,
 }: RowProps): ReactElement {
   return (
@@ -317,8 +346,45 @@ function Row({
       <Switch
         id={id}
         checked={checked}
+        disabled={disabled}
         onCheckedChange={onCheckedChange}
         className="mt-0.5"
+      />
+    </div>
+  );
+}
+
+interface ControlRowProps {
+  id: string;
+  icon: ReactElement;
+  title: string;
+  checked: boolean;
+  disabled: boolean;
+  onCheckedChange: (next: boolean) => void;
+}
+
+function ControlRow({
+  id,
+  icon,
+  title,
+  checked,
+  disabled,
+  onCheckedChange,
+}: ControlRowProps): ReactElement {
+  return (
+    <div className="flex items-center justify-between gap-3 text-xs">
+      <Label
+        htmlFor={id}
+        className="flex min-w-0 items-center gap-2 font-normal"
+      >
+        <span className="text-muted-foreground">{icon}</span>
+        <span className="truncate">{title}</span>
+      </Label>
+      <Switch
+        id={id}
+        checked={checked}
+        disabled={disabled}
+        onCheckedChange={onCheckedChange}
       />
     </div>
   );

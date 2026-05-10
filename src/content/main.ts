@@ -24,6 +24,7 @@ import {
   refreshReviewFlow,
   uninstallReviewFlowRail,
 } from "../features/reviewFlow/reviewFlow";
+import type { ReviewRailControls } from "../features/reviewFlow/types";
 import {
   installPageTopShortcut,
   uninstallPageTopShortcut,
@@ -123,7 +124,7 @@ function applyEnhancements(): void {
     withEditorButton: cachedSettings.editorEnabled,
   });
   if (cachedSettings.reviewFlowEnabled) {
-    refreshReviewFlow();
+    refreshReviewFlow(getReviewRailControls(cachedSettings));
   }
   if (cachedSettings.fileTabsEnabled) {
     refreshFileTabs();
@@ -169,8 +170,9 @@ function applyReviewFlow(): void {
     return;
   }
 
-  installReviewFlowRail();
-  refreshReviewFlow();
+  const controls = getReviewRailControls(cachedSettings);
+  installReviewFlowRail(controls);
+  refreshReviewFlow(controls);
 }
 
 function applyFileTabs(): void {
@@ -199,6 +201,15 @@ function applyPageTopShortcut(): void {
 
   installPageTopShortcut(cachedSettings.pageTopShortcut);
   updatePageTopShortcut(cachedSettings.pageTopShortcut);
+}
+
+function getReviewRailControls(settings: Settings): ReviewRailControls {
+  return {
+    previousComment: settings.reviewFlowPreviousCommentEnabled,
+    nextComment: settings.reviewFlowNextCommentEnabled,
+    nextUnviewed: settings.reviewFlowNextUnviewedEnabled,
+    copyContext: settings.reviewFlowCopyContextEnabled,
+  };
 }
 
 if (document.readyState === "loading") {

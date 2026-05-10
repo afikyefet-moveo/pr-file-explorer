@@ -1,8 +1,19 @@
 import type { FilePath } from "../../shared/dom";
 
-export type ReviewAction = "next-comment" | "next-unviewed" | "copy-context";
+export type ReviewAction =
+  | "previous-comment"
+  | "next-comment"
+  | "next-unviewed"
+  | "copy-context";
 export type ReviewStatusState = "none" | "comments" | "unresolved";
 export type FlashState = "copied" | "error";
+
+export interface ReviewRailControls {
+  previousComment: boolean;
+  nextComment: boolean;
+  nextUnviewed: boolean;
+  copyContext: boolean;
+}
 
 export interface CommentTarget {
   element: HTMLElement;
@@ -15,4 +26,3 @@ export interface ReviewContext {
   selectedText: string;
   url: string;
 }
-

@@ -10,18 +10,30 @@ import {
   getUnviewedRegions,
   hasUnresolvedThread,
 } from "./reviewDom";
-import { findNextElementByViewport, scrollToElement } from "./reviewNavigation";
+import {
+  findNextElementByViewport,
+  findPreviousElementByViewport,
+  scrollToElement,
+} from "./reviewNavigation";
 import {
   applyRailState,
   createReviewRail,
   flashRailButton,
   type RailState,
 } from "./reviewRail";
-import type { ReviewAction } from "./types";
+import type { ReviewAction, ReviewRailControls } from "./types";
 
 let railScrollListener: (() => void) | null = null;
+let railControls: ReviewRailControls = {
+  previousComment: true,
+  nextComment: true,
+  nextUnviewed: true,
+  copyContext: true,
+};
 
-export function installReviewFlowRail(): void {
+export function installReviewFlowRail(controls: ReviewRailControls): void {
+  railControls = controls;
+
   const existing = document.querySelector(`.${REVIEW_RAIL_CLASS}`);
   if (existing) {
     ensureRailScrollListener();
@@ -44,11 +56,15 @@ function ensureRailScrollListener(): void {
   window.addEventListener("scroll", railScrollListener, { passive: true });
 }
 
-export function refreshReviewFlow(): void {
+export function refreshReviewFlow(controls?: ReviewRailControls): void {
+  if (controls) {
+    railControls = controls;
+  }
+
   safely("refresh review flow", () => {
     const rail = document.querySelector<HTMLElement>(`.${REVIEW_RAIL_CLASS}`);
     if (rail) {
-      applyRailState(rail, getRailState());
+      applyRailState(rail, getRailState(railControls));
     }
 
     markFilesWithComments();
@@ -68,23 +84,32 @@ export function uninstallReviewFlowRail(): void {
   debugLog("review flow rail uninstalled");
 }
 
-function getRailState(): RailState {
+function getRailState(controls: ReviewRailControls): RailState {
   const currentRegion = getCurrentDiffRegion();
   const commentTargets = getCommentTargets();
   const unviewedRegions = getUnviewedRegions();
+  const hasComments = commentTargets.length > 0;
 
   return {
     visible: getDiffRegions().length > 0,
     currentStatus: getCurrentStatus(currentRegion),
+    previousComment: {
+      visible: controls.previousComment,
+      enabled: hasComments,
+      tooltip: hasComments ? "Previous comment" : "No comments",
+    },
     nextComment: {
-      enabled: commentTargets.length > 0,
-      tooltip: commentTargets.length ? "Next comment" : "No comments",
+      visible: controls.nextComment,
+      enabled: hasComments,
+      tooltip: hasComments ? "Next comment" : "No comments",
     },
     nextUnviewed: {
+      visible: controls.nextUnviewed,
       enabled: unviewedRegions.length > 0,
       tooltip: unviewedRegions.length ? "Next unviewed file" : "No unviewed files",
     },
     copyContext: {
+      visible: controls.copyContext,
       enabled: Boolean(currentRegion),
       tooltip: currentRegion ? "Copy review context" : "No current file",
     },
@@ -116,13 +141,31 @@ function getCurrentStatus(region: HTMLElement | null): RailState["currentStatus"
 }
 
 function onRailAction(action: ReviewAction, button: HTMLElement): void {
-  if (action === "next-comment") {
+  if (action === "previous-comment") {
+    jumpToPreviousComment(button);
+  } else if (action === "next-comment") {
     jumpToNextComment(button);
   } else if (action === "next-unviewed") {
     jumpToNextUnviewedFile(button);
   } else if (action === "copy-context") {
     void copyReviewContext(button);
   }
+}
+
+function jumpToPreviousComment(button: HTMLElement): void {
+  const elements = getCommentTargets().map((target) => target.element);
+  const previous = findPreviousElementByViewport(elements) ?? elements.at(-1);
+  if (!previous) {
+    return;
+  }
+
+  scrollToElement(previous);
+  flashRailButton(
+    button,
+    "copied",
+    "Jumped to previous comment",
+    refreshReviewFlow
+  );
 }
 
 function jumpToNextComment(button: HTMLElement): void {
