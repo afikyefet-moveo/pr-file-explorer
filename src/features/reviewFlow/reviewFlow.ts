@@ -1,12 +1,14 @@
 import { REVIEW_RAIL_CLASS } from "../../shared/constants";
 import { debugLog, safely } from "../../shared/diagnostics";
 import { clearCommentBadges, markFilesWithComments } from "./commentBadges";
+import { copyUnresolvedCommentsForAgent } from "./reviewAgentComments";
 import { copyReviewContextForRegion } from "./reviewContext";
 import {
   getCommentTargets,
   getCommentTargetsForRegion,
   getCurrentDiffRegion,
   getDiffRegions,
+  getUnresolvedCommentTargets,
   getUnviewedRegions,
   hasUnresolvedThread,
 } from "./reviewDom";
@@ -29,6 +31,7 @@ let railControls: ReviewRailControls = {
   nextComment: true,
   nextUnviewed: true,
   copyContext: true,
+  copyCommentsToAgent: true,
 };
 
 export function installReviewFlowRail(controls: ReviewRailControls): void {
@@ -87,8 +90,10 @@ export function uninstallReviewFlowRail(): void {
 function getRailState(controls: ReviewRailControls): RailState {
   const currentRegion = getCurrentDiffRegion();
   const commentTargets = getCommentTargets();
+  const unresolvedCommentTargets = getUnresolvedCommentTargets();
   const unviewedRegions = getUnviewedRegions();
   const hasComments = commentTargets.length > 0;
+  const unresolvedCommentCount = unresolvedCommentTargets.length;
 
   return {
     visible: getDiffRegions().length > 0,
@@ -112,6 +117,13 @@ function getRailState(controls: ReviewRailControls): RailState {
       visible: controls.copyContext,
       enabled: Boolean(currentRegion),
       tooltip: currentRegion ? "Copy review context" : "No current file",
+    },
+    copyCommentsToAgent: {
+      visible: controls.copyCommentsToAgent,
+      enabled: unresolvedCommentCount > 0,
+      tooltip: unresolvedCommentCount
+        ? `Copy ${unresolvedCommentCount} unresolved comments to agent`
+        : "No unresolved comments",
     },
   };
 }
@@ -149,6 +161,8 @@ function onRailAction(action: ReviewAction, button: HTMLElement): void {
     jumpToNextUnviewedFile(button);
   } else if (action === "copy-context") {
     void copyReviewContext(button);
+  } else if (action === "copy-comments-to-agent") {
+    void copyCommentsToAgent(button);
   }
 }
 
@@ -202,5 +216,29 @@ async function copyReviewContext(button: HTMLElement): Promise<void> {
     flashRailButton(button, "copied", "Copied review context", refreshReviewFlow);
   } catch {
     flashRailButton(button, "error", "Could not copy review context", refreshReviewFlow);
+  }
+}
+
+async function copyCommentsToAgent(button: HTMLElement): Promise<void> {
+  try {
+    const count = await copyUnresolvedCommentsForAgent();
+    if (!count) {
+      flashRailButton(button, "error", "No unresolved comments", refreshReviewFlow);
+      return;
+    }
+
+    flashRailButton(
+      button,
+      "copied",
+      `Copied ${count} unresolved comments`,
+      refreshReviewFlow
+    );
+  } catch {
+    flashRailButton(
+      button,
+      "error",
+      "Could not copy unresolved comments",
+      refreshReviewFlow
+    );
   }
 }

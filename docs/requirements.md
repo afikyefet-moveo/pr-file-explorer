@@ -164,8 +164,9 @@ Best-effort DOM helpers:
 ### Prototype Behavior
 
 - A compact floating review rail appears on PR files pages.
-- The rail includes previous/next comment, next unviewed file, and copy review context actions.
-- The previous comment, next comment, next unviewed, and copy context buttons can be shown or hidden independently from the toolbar popup.
+- The rail includes actions for previous/next comment, next unviewed file, copy review context, and copy unresolved comments to an agent.
+- The previous comment, next comment, next unviewed, copy context, and copy comments to agent buttons can be shown or hidden independently from the toolbar popup.
+- Copy comments to agent copies rendered unresolved threads grouped by file, with regular reviewer text preserved and CodeRabbit comments labeled with verification guidance.
 - Review context is copied as Markdown with file path, inferred line/range, PR URL, and selected text when present.
 - Files with visible review threads receive a subtle dot in the file explorer.
 - Current-file status shows no comments, comments, or unresolved only when the DOM exposes a confident resolve action.

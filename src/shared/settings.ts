@@ -11,6 +11,7 @@ export interface Settings {
   reviewFlowNextCommentEnabled: boolean;
   reviewFlowNextUnviewedEnabled: boolean;
   reviewFlowCopyContextEnabled: boolean;
+  reviewFlowCopyCommentsToAgentEnabled: boolean;
   fileTabsEnabled: boolean;
   editorEnabled: boolean;
   editor: EditorChoice;
@@ -31,6 +32,8 @@ const STORAGE_KEYS = {
   reviewFlowNextUnviewedEnabled:
     "prFileExplorer.reviewFlowNextUnviewedEnabled",
   reviewFlowCopyContextEnabled: "prFileExplorer.reviewFlowCopyContextEnabled",
+  reviewFlowCopyCommentsToAgentEnabled:
+    "prFileExplorer.reviewFlowCopyCommentsToAgentEnabled",
   fileTabsEnabled: "prFileExplorer.fileTabsEnabled",
   editorEnabled: "prFileExplorer.editorEnabled",
   editor: "prFileExplorer.editor",
@@ -49,6 +52,7 @@ export const DEFAULT_SETTINGS: Settings = {
   reviewFlowNextCommentEnabled: true,
   reviewFlowNextUnviewedEnabled: true,
   reviewFlowCopyContextEnabled: true,
+  reviewFlowCopyCommentsToAgentEnabled: true,
   fileTabsEnabled: true,
   editorEnabled: true,
   editor: "cursor",
@@ -97,6 +101,10 @@ export async function getSettings(): Promise<Settings> {
       stored[STORAGE_KEYS.reviewFlowCopyContextEnabled],
       DEFAULT_SETTINGS.reviewFlowCopyContextEnabled
     ),
+    reviewFlowCopyCommentsToAgentEnabled: coerceBool(
+      stored[STORAGE_KEYS.reviewFlowCopyCommentsToAgentEnabled],
+      DEFAULT_SETTINGS.reviewFlowCopyCommentsToAgentEnabled
+    ),
     fileTabsEnabled: coerceBool(
       stored[STORAGE_KEYS.fileTabsEnabled],
       DEFAULT_SETTINGS.fileTabsEnabled
@@ -134,6 +142,8 @@ export async function setSettings(patch: Partial<Settings>): Promise<Settings> {
       next.reviewFlowNextUnviewedEnabled,
     [STORAGE_KEYS.reviewFlowCopyContextEnabled]:
       next.reviewFlowCopyContextEnabled,
+    [STORAGE_KEYS.reviewFlowCopyCommentsToAgentEnabled]:
+      next.reviewFlowCopyCommentsToAgentEnabled,
     [STORAGE_KEYS.fileTabsEnabled]: next.fileTabsEnabled,
     [STORAGE_KEYS.editorEnabled]: next.editorEnabled,
     [STORAGE_KEYS.editor]: next.editor,

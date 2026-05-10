@@ -4,7 +4,8 @@ export type ReviewAction =
   | "previous-comment"
   | "next-comment"
   | "next-unviewed"
-  | "copy-context";
+  | "copy-context"
+  | "copy-comments-to-agent";
 export type ReviewStatusState = "none" | "comments" | "unresolved";
 export type FlashState = "copied" | "error";
 
@@ -13,6 +14,7 @@ export interface ReviewRailControls {
   nextComment: boolean;
   nextUnviewed: boolean;
   copyContext: boolean;
+  copyCommentsToAgent: boolean;
 }
 
 export interface CommentTarget {

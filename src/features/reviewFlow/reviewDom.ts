@@ -40,10 +40,14 @@ export function getFilePathFromRegion(region: HTMLElement): FilePath | null {
 
 export function getCommentTargets(): CommentTarget[] {
   const allTargets = getAllCommentTargets();
-  const unresolvedTargets = allTargets.filter((target) =>
-    isUnresolvedThread(target.element)
-  );
+  const unresolvedTargets = getUnresolvedCommentTargets(allTargets);
   return unresolvedTargets.length ? unresolvedTargets : allTargets;
+}
+
+export function getUnresolvedCommentTargets(
+  targets = getAllCommentTargets()
+): CommentTarget[] {
+  return targets.filter((target) => isUnresolvedThread(target.element));
 }
 
 export function getAllCommentTargets(): CommentTarget[] {

@@ -209,6 +209,7 @@ function getReviewRailControls(settings: Settings): ReviewRailControls {
     nextComment: settings.reviewFlowNextCommentEnabled,
     nextUnviewed: settings.reviewFlowNextUnviewedEnabled,
     copyContext: settings.reviewFlowCopyContextEnabled,
+    copyCommentsToAgent: settings.reviewFlowCopyCommentsToAgentEnabled,
   };
 }
 

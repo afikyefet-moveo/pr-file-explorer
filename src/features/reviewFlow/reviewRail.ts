@@ -6,6 +6,7 @@ import {
 } from "../../shared/constants";
 import {
   getCommentDownIconSvg,
+  getCommentIconSvg,
   getCommentUpIconSvg,
   getCopyContextIconSvg,
   getUnviewedIconSvg,
@@ -40,6 +41,11 @@ interface RailState {
     enabled: boolean;
     tooltip: string;
   };
+  copyCommentsToAgent: {
+    visible: boolean;
+    enabled: boolean;
+    tooltip: string;
+  };
 }
 
 export function createReviewRail(onClick: (action: ReviewAction, button: HTMLElement) => void): HTMLElement {
@@ -58,6 +64,13 @@ export function createReviewRail(onClick: (action: ReviewAction, button: HTMLEle
   );
   rail.appendChild(
     createRailButton("copy-context", "Copy review context", getCopyContextIconSvg())
+  );
+  rail.appendChild(
+    createRailButton(
+      "copy-comments-to-agent",
+      "Copy comments to agent",
+      getCommentIconSvg()
+    )
   );
   rail.addEventListener("click", (event) => {
     const button = (event.target as HTMLElement | null)?.closest<HTMLElement>(
@@ -92,6 +105,12 @@ export function applyRailState(rail: HTMLElement, state: RailState): void {
     rail.querySelector<HTMLButtonElement>("[data-review-action='copy-context']"),
     state.copyContext.visible
   );
+  setButtonVisibility(
+    rail.querySelector<HTMLButtonElement>(
+      "[data-review-action='copy-comments-to-agent']"
+    ),
+    state.copyCommentsToAgent.visible
+  );
   setButtonEnabled(
     rail.querySelector<HTMLButtonElement>("[data-review-action='previous-comment']"),
     state.previousComment.enabled,
@@ -111,6 +130,13 @@ export function applyRailState(rail: HTMLElement, state: RailState): void {
     rail.querySelector<HTMLButtonElement>("[data-review-action='copy-context']"),
     state.copyContext.enabled,
     state.copyContext.tooltip
+  );
+  setButtonEnabled(
+    rail.querySelector<HTMLButtonElement>(
+      "[data-review-action='copy-comments-to-agent']"
+    ),
+    state.copyCommentsToAgent.enabled,
+    state.copyCommentsToAgent.tooltip
   );
   setStatus(rail.querySelector<HTMLElement>(`.${REVIEW_STATUS_CLASS}`), state);
 }

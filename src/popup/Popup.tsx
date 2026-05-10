@@ -6,6 +6,7 @@ import {
   Copy,
   Eye,
   Loader2,
+  MessageSquareText,
   Pin,
 } from "lucide-react";
 
@@ -156,6 +157,16 @@ export function Popup(): ReactElement {
           disabled={reviewRailControlsDisabled}
           onCheckedChange={(value) =>
             void update({ reviewFlowCopyContextEnabled: value })
+          }
+        />
+        <ControlRow
+          id="review-flow-copy-comments-to-agent-enabled"
+          icon={<MessageSquareText className="h-3.5 w-3.5" />}
+          title="Copy comments to agent"
+          checked={settings.reviewFlowCopyCommentsToAgentEnabled}
+          disabled={reviewRailControlsDisabled}
+          onCheckedChange={(value) =>
+            void update({ reviewFlowCopyCommentsToAgentEnabled: value })
           }
         />
         <p className="text-[11px] leading-snug text-muted-foreground">
