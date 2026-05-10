@@ -30,6 +30,11 @@ import {
   uninstallPageTopShortcut,
   updatePageTopShortcut,
 } from "./pageTopShortcut";
+import {
+  installExplorerSync,
+  refreshExplorerSync,
+  uninstallExplorerSync,
+} from "../features/explorerSync/explorerSync";
 import { hideTooltip } from "../shared/tooltip";
 import { TOP_BUTTON_CLASS } from "../shared/constants";
 
@@ -101,6 +106,7 @@ function applyAll(): void {
   safely("apply back to top", applyGoToTop);
   safely("apply review flow", applyReviewFlow);
   safely("apply file tabs", applyFileTabs);
+  safely("apply explorer sync", applyExplorerSync);
   safely("apply page top shortcut", applyPageTopShortcut);
 }
 
@@ -112,6 +118,7 @@ function uninstallAll(): void {
   uninstallReviewFlowRail();
   uninstallFileTabs();
   uninstallPageTopShortcut();
+  uninstallExplorerSync();
   hideTooltip();
 }
 
@@ -128,6 +135,9 @@ function applyEnhancements(): void {
   }
   if (cachedSettings.fileTabsEnabled) {
     refreshFileTabs();
+  }
+  if (cachedSettings.explorerSyncEnabled) {
+    refreshExplorerSync();
   }
 }
 
@@ -187,6 +197,19 @@ function applyFileTabs(): void {
 
   installFileTabs();
   refreshFileTabs();
+}
+
+function applyExplorerSync(): void {
+  if (!cachedSettings || !activeOnCurrentRoute) {
+    return;
+  }
+
+  if (!cachedSettings.explorerSyncEnabled) {
+    uninstallExplorerSync();
+    return;
+  }
+
+  installExplorerSync();
 }
 
 function applyPageTopShortcut(): void {

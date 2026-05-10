@@ -29,10 +29,18 @@ export function findFileTreeItem(filePath: FilePath): HTMLElement | null {
   );
 }
 
-export function scrollItemIntoExplorerView(item: HTMLElement): void {
+export function scrollItemIntoExplorerView(
+  item: HTMLElement,
+  options?: { behavior?: ScrollBehavior }
+): void {
+  const behavior = options?.behavior ?? "smooth";
   const scroller = getFileTreeScroller();
   if (!scroller) {
-    item.scrollIntoView({ block: "center", inline: "nearest", behavior: "smooth" });
+    item.scrollIntoView({
+      block: "center",
+      inline: "nearest",
+      behavior,
+    });
     return;
   }
 
@@ -47,7 +55,7 @@ export function scrollItemIntoExplorerView(item: HTMLElement): void {
 
   scroller.scrollTo({
     top: nextTop,
-    behavior: "smooth",
+    behavior,
   });
 }
 

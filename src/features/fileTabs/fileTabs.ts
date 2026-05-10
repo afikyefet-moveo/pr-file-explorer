@@ -1234,3 +1234,8 @@ function getHeaderStickyOffset(wrapper: HTMLElement): string {
 function formatHeaderStickyOffset(original: string, offset: number): string {
   return original ? `calc(${original} + ${offset}px)` : `${offset}px`;
 }
+
+/** Exported for explorer sync viewport alignment with file tabs. */
+export function getFileTabsBarHeight(): number {
+  return getTabsBarHeight();
+}

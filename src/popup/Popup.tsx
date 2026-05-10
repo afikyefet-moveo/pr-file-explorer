@@ -107,6 +107,16 @@ export function Popup(): ReactElement {
         />
       </div>
 
+      <Row
+        id="explorer-sync-enabled"
+        title="Sync file tree"
+        description="Highlight the file you are viewing in the left explorer while you scroll the diff."
+        checked={settings.explorerSyncEnabled}
+        onCheckedChange={(value) =>
+          void update({ explorerSyncEnabled: value })
+        }
+      />
+
       <Separator />
 
       <Row

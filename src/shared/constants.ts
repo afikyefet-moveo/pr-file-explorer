@@ -11,6 +11,7 @@ export const FILE_TAB_PIN_BUTTON_CLASS = "pr-file-explorer-pin-button";
 export const TOOLTIP_CLASS = "pr-file-explorer-tooltip";
 export const TOOLTIP_ID = "pr-file-explorer-tooltip";
 export const HIGHLIGHT_CLASS = "pr-file-explorer-highlight";
+export const TREE_SYNC_CLASS = "pr-file-explorer-tree-sync";
 
 export const OBSERVER_DEBOUNCE_MS = 150;
 export const TOP_BUTTON_VISIBLE_OFFSET = 360;

@@ -364,3 +364,10 @@
     box-shadow: inset 0 0 0 1px transparent;
   }
 }
+
+.pr-file-explorer-tree-sync > .PRIVATE_TreeView-item-container,
+.pr-file-explorer-tree-sync .PRIVATE_TreeView-item-container,
+.pr-file-explorer-tree-sync {
+  background: var(--bgColor-accent-muted, var(--color-accent-subtle));
+  box-shadow: inset 3px 0 0 0 var(--fgColor-accent, var(--color-accent-fg));
+}

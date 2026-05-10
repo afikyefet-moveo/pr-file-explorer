@@ -18,6 +18,7 @@ export interface Settings {
   repoRoot: string;
   pageTopShortcutEnabled: boolean;
   pageTopShortcut: string;
+  explorerSyncEnabled: boolean;
 }
 
 const STORAGE_KEYS = {
@@ -40,6 +41,7 @@ const STORAGE_KEYS = {
   repoRoot: "prFileExplorer.repoRoot",
   pageTopShortcutEnabled: "prFileExplorer.pageTopShortcutEnabled",
   pageTopShortcut: "prFileExplorer.pageTopShortcut",
+  explorerSyncEnabled: "prFileExplorer.explorerSyncEnabled",
 } as const;
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -59,6 +61,7 @@ export const DEFAULT_SETTINGS: Settings = {
   repoRoot: "",
   pageTopShortcutEnabled: true,
   pageTopShortcut: "Shift+T",
+  explorerSyncEnabled: false,
 };
 
 export async function getSettings(): Promise<Settings> {
@@ -123,6 +126,10 @@ export async function getSettings(): Promise<Settings> {
       stored[STORAGE_KEYS.pageTopShortcut],
       DEFAULT_SETTINGS.pageTopShortcut
     ),
+    explorerSyncEnabled: coerceBool(
+      stored[STORAGE_KEYS.explorerSyncEnabled],
+      DEFAULT_SETTINGS.explorerSyncEnabled
+    ),
   };
 }
 
@@ -150,6 +157,7 @@ export async function setSettings(patch: Partial<Settings>): Promise<Settings> {
     [STORAGE_KEYS.repoRoot]: next.repoRoot,
     [STORAGE_KEYS.pageTopShortcutEnabled]: next.pageTopShortcutEnabled,
     [STORAGE_KEYS.pageTopShortcut]: next.pageTopShortcut,
+    [STORAGE_KEYS.explorerSyncEnabled]: next.explorerSyncEnabled,
   });
   return next;
 }
