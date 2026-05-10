@@ -12,6 +12,8 @@ let installed = false;
 let root: HTMLElement | null = null;
 let dropdown: HTMLElement | null = null;
 let menuButton: HTMLButtonElement | null = null;
+/** Authoritative open state — do not infer from `dropdown.hidden` (SPA DOM can desync). */
+let navDropdownOpen = false;
 let documentPointerDown: ((event: PointerEvent) => void) | null = null;
 let documentKeyDown: ((event: KeyboardEvent) => void) | null = null;
 
@@ -95,11 +97,21 @@ export function uninstallPrNavMenu(): void {
   root = null;
   dropdown = null;
   menuButton = null;
+  navDropdownOpen = false;
   installed = false;
 }
 
 export function refreshPrNavMenu(): void {
   if (!installed || !dropdown) {
+    return;
+  }
+
+  // Skip the rebuild while the dropdown is open. GitHub's MutationObserver
+  // fires constantly and can trigger this mid-click — calling replaceChildren()
+  // destroys the link element between pointerdown and pointerup, preventing
+  // the browser from firing a click event. The dropdown always rebuilds fresh
+  // when it next opens (via toggleDropdown), so skipping here is safe.
+  if (navDropdownOpen) {
     return;
   }
 
@@ -113,6 +125,7 @@ function toggleDropdown(): void {
   const next = dropdown.hidden;
   if (next) {
     rebuildDropdownLinks(dropdown);
+    navDropdownOpen = true;
     dropdown.hidden = false;
     menuButton.dataset["expanded"] = "true";
     menuButton.setAttribute("aria-expanded", "true");
@@ -129,8 +142,10 @@ function closeDropdown(): void {
     return;
   }
   if (dropdown.hidden) {
+    navDropdownOpen = false;
     return;
   }
+  navDropdownOpen = false;
   dropdown.hidden = true;
   menuButton.dataset["expanded"] = "false";
   menuButton.setAttribute("aria-expanded", "false");
