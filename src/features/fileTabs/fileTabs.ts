@@ -14,6 +14,15 @@ import {
 import { getCloseIconSvg, getPinIconSvg } from "../../shared/icons";
 import { getStickyHeaderOffset } from "../../shared/stickyHeader";
 import { installTooltip, updateTooltipText } from "../../shared/tooltip";
+import {
+  ensureStickyStack,
+  getStickyChromeBelowHeaderHeight,
+  getStickyMountTarget,
+  getStickyStackFromChild,
+  maybeRemoveStickyStackIfEmpty,
+  placeFileTabsBarInStack,
+  STICKY_STACK_TOP_PROPERTY,
+} from "../stickyDiffChrome/stickyDiffChrome";
 
 interface OpenFile {
   path: FilePath;
@@ -24,7 +33,6 @@ interface OpenFile {
 const ORIGINAL_STICKY_OFFSET_KEY = "prFileExplorerOriginalStickyOffset";
 const APPLIED_STICKY_OFFSET_KEY = "prFileExplorerAppliedStickyOffset";
 const HEADER_STICKY_OFFSET_PROPERTY = "--header-sticky-offset";
-const TABS_STICKY_TOP_PROPERTY = "--pr-file-explorer-sticky-top";
 const FILE_HEADER_GAP_PX = 4;
 const STORAGE_KEY_PREFIX = "prFileExplorer.fileTabs.";
 const TAB_CONTEXT_MENU_CLASS = "pr-file-explorer-tab-menu";
@@ -221,6 +229,7 @@ export function refreshFileTabs(): void {
 export function uninstallFileTabs(): void {
   cancelTabDrag();
   document.querySelector<HTMLElement>(`.${FILE_TABS_BAR_CLASS}`)?.remove();
+  maybeRemoveStickyStackIfEmpty();
   hideTabContextMenu();
   getTabContextMenu()?.remove();
   document
@@ -250,60 +259,21 @@ export function uninstallFileTabs(): void {
   installed = false;
 }
 
-interface TabsMountTarget {
-  parent: HTMLElement;
-  before: ChildNode | null;
-}
-
-function getTabsMountTarget(): TabsMountTarget | null {
-  const diffContent = document.querySelector<HTMLElement>(
-    "[data-testid='diff-content']"
-  );
-  const diffList = document.querySelector<HTMLElement>(
-    "[data-testid='progressive-diffs-list']"
-  );
-
-  if (diffContent) {
-    return {
-      parent: diffContent,
-      before: diffList?.parentElement === diffContent ? diffList : null,
-    };
-  }
-
-  if (diffList?.parentElement) {
-    return {
-      parent: diffList.parentElement,
-      before: diffList,
-    };
-  }
-
-  return null;
-}
-
 function ensureBarMounted(): HTMLElement {
   let bar = document.querySelector<HTMLElement>(`.${FILE_TABS_BAR_CLASS}`);
   if (!bar) {
     bar = createTabsBar();
   }
 
-  const mount = getTabsMountTarget();
-  if (!mount) {
+  const stack = ensureStickyStack();
+  if (!stack) {
     if (!bar.isConnected) {
       document.body.appendChild(bar);
     }
     return bar;
   }
 
-  if (bar.parentElement !== mount.parent) {
-    mount.parent.insertBefore(bar, mount.before);
-  } else if (
-    mount.before &&
-    mount.before !== bar &&
-    bar.nextSibling !== mount.before
-  ) {
-    mount.parent.insertBefore(bar, mount.before);
-  }
-
+  placeFileTabsBarInStack(stack, bar);
   return bar;
 }
 
@@ -1135,11 +1105,13 @@ function onViewportChange(): void {
 }
 
 function syncStickyLayout(bar: HTMLElement): void {
-  const hasMount = Boolean(getTabsMountTarget());
+  const hasMount = Boolean(getStickyMountTarget());
   const visible = hasMount && openFiles.length > 0;
   const stickyOffset = getStickyHeaderOffset();
 
-  bar.style.setProperty(TABS_STICKY_TOP_PROPERTY, `${stickyOffset}px`);
+  const stack = getStickyStackFromChild(bar);
+  const stickyTarget = stack ?? bar;
+  stickyTarget.style.setProperty(STICKY_STACK_TOP_PROPERTY, `${stickyOffset}px`);
   bar.dataset["visible"] = visible ? "true" : "false";
 
   if (!visible) {
@@ -1164,11 +1136,7 @@ function updateActiveTabState(): void {
 }
 
 function getTabsBarHeight(): number {
-  const bar = document.querySelector<HTMLElement>(`.${FILE_TABS_BAR_CLASS}`);
-  if (!bar || bar.dataset["visible"] !== "true") {
-    return 0;
-  }
-  return bar.getBoundingClientRect().height;
+  return getStickyChromeBelowHeaderHeight();
 }
 
 function applyFileHeaderOffsets(offset: number): void {
